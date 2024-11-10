@@ -1,62 +1,15 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+	<!-- ChatGPTに作ってもらった -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TeXエディター</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .tabs {
-            display: flex;
-            gap: 5px;
-            padding: 5px;
-            overflow-x: auto;
-            width: 100%;
-            background-color: #f1f1f1;
-            box-shadow: 0 4px 2px -2px gray;
-        }
-        .tab {
-            padding: 8px 16px;
-            background-color: #eee;
-            cursor: pointer;
-            flex: 1;
-            text-align: center;
-        }
-        .tab.active {
-            background-color: #ccc;
-            font-weight: bold;
-        }
-        .editor-container {
-            display: flex;
-            width: 100%;
-            height: calc(100% - 50px);
-        }
-        .editor, .preview {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            overflow-y: auto;
-            box-sizing: border-box;
-        }
-        .editor {
-            font-family: 'メイリオ', sans-serif;
-            border-right: none;
-            resize: none;
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+	<link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="tabs">
-        <!-- タブを10個に増やしました -->
         <div class="tab active" onclick="switchTab(0)">テキスト1</div>
         <div class="tab" onclick="switchTab(1)">テキスト2</div>
         <div class="tab" onclick="switchTab(2)">テキスト3</div>
@@ -74,8 +27,8 @@
         <div class="preview" id="preview"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
