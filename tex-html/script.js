@@ -57,10 +57,10 @@ function updatePreview() {
 
     // align環境とalign*環境をalignedに変換
     editorText = editorText
-        .replace(/\\begin{align\*}/g, '$$\\begin{aligned}')
-        .replace(/\\end{align\*}/g, '\\end{aligned}$$')
-        .replace(/\\begin{align}/g, '$$\\begin{aligned}')
-        .replace(/\\end{align}/g, '\\end{aligned}$$');
+        .replace(/\\begin{align\*}/g, '\\[\\begin{aligned}')
+        .replace(/\\end{align\*}/g, '\\end{aligned}\\]')
+        .replace(/\\begin{align}/g, '\\[\\begin{aligned}')
+        .replace(/\\end{align}/g, '\\end{aligned}\\]');
 
     // 数式中の改行を無視
     editorText = editorText.replace(/(\$\$.*?\$\$|\\\[.*?\\\]|\$.*?\$|\\\(.*?\\\))/gs, (match) => {
@@ -68,7 +68,8 @@ function updatePreview() {
     });
 
     // 改行を <br> タグに変換
-    const formattedText = editorText.replace(/\n/g, '<br>');
+    // const formattedText = editorText.replace(/\n/g, '<br>');
+	const formattedText = editorText.replace(/\n\n/g, '<br>');
 	
 	console.log(formattedText);
 
