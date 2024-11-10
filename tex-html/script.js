@@ -43,6 +43,8 @@ function updatePreview() {
         .replace(/\\end{quote}/g, '</blockquote>')
         .replace(/\\begin{itemize}/g, '<ul>')
         .replace(/\\end{itemize}/g, '</ul>')
+        .replace(/\\begin{enumerate}/g, '<ol>')
+        .replace(/\\end{enumerate}/g, '</ol>')
         .replace(/\\item/g, '<li>')
         .replace(/\\textbf{([^}]+)}/g, '<strong>$1</strong>');  // 太字
 
@@ -53,10 +55,24 @@ function updatePreview() {
         .replace(/([^ ])(\\\()/g, '$1 \\( ')
         .replace(/(\\\))([^ ])/g, ' \\) $2');
 
+    // align環境とalign*環境をalignedに変換
+    editorText = editorText
+        .replace(/\\begin{align\*}/g, '$$\\begin{aligned}')
+        .replace(/\\end{align\*}/g, '\\end{aligned}$$')
+        .replace(/\\begin{align}/g, '$$\\begin{aligned}')
+        .replace(/\\end{align}/g, '\\end{aligned}$$');
+
+    // 数式中の改行を無視
+    editorText = editorText.replace(/(\$\$.*?\$\$|\\\[.*?\\\]|\$.*?\$|\\\(.*?\\\))/gs, (match) => {
+        return match.replace(/\n/g, '');
+    });
+
     // 改行を <br> タグに変換
     const formattedText = editorText.replace(/\n/g, '<br>');
+	
+	console.log(formattedText);
 
-    // KaTeXでレンダリング（$$、$、\[\]、\(\)も対応）
+    // KaTeXでレンダリング（$$、$、\[\]、\(\)、align、align*にも対応）
     previewElement.innerHTML = formattedText;
     renderMathInElement(previewElement, {
         delimiters: [
