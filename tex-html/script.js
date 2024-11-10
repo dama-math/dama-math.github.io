@@ -68,8 +68,8 @@ function updatePreview() {
     });
 
     // 改行を <br> タグに変換
-    // const formattedText = editorText.replace(/\n/g, '<br>');
-	const formattedText = editorText.replace(/\n\n/g, '<br>');
+    const formattedText = editorText.replace(/\n/g, '<br>');
+	// const formattedText = editorText.replace(/\n\n/g, '<br>');
 	
 	console.log(formattedText);
 
