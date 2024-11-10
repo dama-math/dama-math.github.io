@@ -5,7 +5,7 @@ let texts = new Array(numTabs).fill("");
 // ローカルストレージからテキストを読み込み
 function loadTexts() {
     const savedTexts = JSON.parse(localStorage.getItem('texts'));
-    if (savedTexts) {
+    if (savedTexts && savedTexts.length === numTabs) {
         texts = savedTexts;
         document.getElementById("editor").value = texts[currentTab];
         updatePreview();
@@ -14,18 +14,21 @@ function loadTexts() {
 
 // ローカルストレージにテキストを保存
 function saveTexts() {
+    texts[currentTab] = document.getElementById("editor").value;
     localStorage.setItem('texts', JSON.stringify(texts));
 }
 
 function switchTab(tabIndex) {
-    texts[currentTab] = document.getElementById("editor").value;
+    // 現在のタブのテキストを保存
     saveTexts();
     currentTab = tabIndex;
 
+    // タブ表示を更新
     document.querySelectorAll('.tab').forEach((tab, index) => {
         tab.classList.toggle('active', index === currentTab);
     });
 
+    // 新しいタブのテキストをエディタに表示
     document.getElementById("editor").value = texts[currentTab];
     updatePreview();
 }
@@ -69,9 +72,6 @@ function updatePreview() {
 
     // 改行を <br> タグに変換
     const formattedText = editorText.replace(/\n/g, '<br>');
-	// const formattedText = editorText.replace(/\n\n/g, '<br>');
-	
-	console.log(formattedText);
 
     // KaTeXでレンダリング（$$、$、\[\]、\(\)、align、align*にも対応）
     previewElement.innerHTML = formattedText;
@@ -84,6 +84,9 @@ function updatePreview() {
         ]
     });
 }
+
+// エディタの変更を保存
+document.getElementById("editor").addEventListener("input", saveTexts);
 
 // ページ読み込み時にテキストをロード
 window.onload = loadTexts;
