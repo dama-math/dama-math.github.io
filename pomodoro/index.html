@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ポモドーロタイマー</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+        
+        .timer-display {
+            font-size: 5rem;
+            font-weight: bold;
+            margin: 1.5rem 0;
+            color: #e74c3c;
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        .start-btn {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .pause-btn {
+            background-color: #f39c12;
+            color: white;
+        }
+        
+        .reset-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .timer-options {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        
+        .timer-option {
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            background-color: #ecf0f1;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .timer-option.active {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .status {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .settings {
+            margin-top: 2rem;
+            text-align: left;
+        }
+        
+        .settings h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .setting-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        
+        .setting-row label {
+            flex: 1;
+            margin-right: 1rem;
+        }
+        
+        .setting-row input {
+            width: 80px;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .cycles-count {
+            margin-top: 1rem;
+            font-size: 1.1rem;
+            color: #333;
+        }
+        
+        @media (max-width: 600px) {
+            .timer-display {
+                font-size: 4rem;
+            }
+            
+            .timer-options {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ポモドーロタイマー</h1>
+        
+        <div class="status">作業の準備ができました</div>
+        
+        <div class="timer-display">25:00</div>
+        
+        <div class="timer-options">
+            <div class="timer-option active" data-type="work">作業</div>
+            <div class="timer-option" data-type="short-break">短休憩</div>
+            <div class="timer-option" data-type="long-break">長休憩</div>
+        </div>
+        
+        <div class="buttons">
+            <button class="start-btn">開始</button>
+            <button class="pause-btn" disabled>一時停止</button>
+            <button class="reset-btn">リセット</button>
+        </div>
+        
+        <div class="cycles-count">完了したサイクル: 0</div>
+        
+        <div class="settings">
+            <h3>設定</h3>
+            <div class="setting-row">
+                <label for="work-time">作業時間（分）:</label>
+                <input type="number" id="work-time" min="1" max="60" value="25">
+            </div>
+            <div class="setting-row">
+                <label for="short-break-time">短休憩時間（分）:</label>
+                <input type="number" id="short-break-time" min="1" max="30" value="5">
+            </div>
+            <div class="setting-row">
+                <label for="long-break-time">長休憩時間（分）:</label>
+                <input type="number" id="long-break-time" min="1" max="60" value="15">
+            </div>
+            <div class="setting-row">
+                <label for="long-break-interval">長休憩までのサイクル数:</label>
+                <input type="number" id="long-break-interval" min="1" max="10" value="4">
+            </div>
+            <div class="setting-row">
+                <label for="volume">音量:</label>
+                <input type="range" id="volume" min="0" max="1" step="0.1" value="0.5">
+            </div>
+            <div class="setting-row">
+                <label for="auto-start">タイマー完了後、自動的に次のタイマーを開始:</label>
+                <input type="checkbox" id="auto-start">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 要素の取得
+            const timerDisplay = document.querySelector('.timer-display');
+            const startBtn = document.querySelector('.start-btn');
+            const pauseBtn = document.querySelector('.pause-btn');
+            const resetBtn = document.querySelector('.reset-btn');
+            const timerOptions = document.querySelectorAll('.timer-option');
+            const statusText = document.querySelector('.status');
+            const cyclesCount = document.querySelector('.cycles-count');
+            
+            // 設定項目
+            const workTimeInput = document.getElementById('work-time');
+            const shortBreakTimeInput = document.getElementById('short-break-time');
+            const longBreakTimeInput = document.getElementById('long-break-time');
+            const longBreakIntervalInput = document.getElementById('long-break-interval');
+            const volumeInput = document.getElementById('volume');
+            const autoStartInput = document.getElementById('auto-start');
+            
+            // 音声ファイル
+            const startSound = new Audio('start.flac');  // ご自身の音声ファイルパスに変更してください
+            const stopSound = new Audio('stop.mp3');    // ご自身の音声ファイルパスに変更してください
+            
+            // タイマー変数
+            let timer;
+            let timeLeft;
+            let isRunning = false;
+            let currentMode = 'work';
+            let completedCycles = 0;
+            let isPaused = false;
+            
+            // 初期設定
+            updateTimerDisplay(getWorkTime() * 60);
+            
+            // 時間を分:秒形式で表示
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            
+            // タイマー表示の更新
+            function updateTimerDisplay(seconds) {
+                timerDisplay.textContent = formatTime(seconds);
+            }
+            
+            // 設定から作業時間を取得（分単位）
+            function getWorkTime() {
+                return parseInt(workTimeInput.value) || 25;
+            }
+            
+            // 設定から短休憩時間を取得（分単位）
+            function getShortBreakTime() {
+                return parseInt(shortBreakTimeInput.value) || 5;
+            }
+            
+            // 設定から長休憩時間を取得（分単位）
+            function getLongBreakTime() {
+                return parseInt(longBreakTimeInput.value) || 15;
+            }
+            
+            // 設定から長休憩までのサイクル数を取得
+            function getLongBreakInterval() {
+                return parseInt(longBreakIntervalInput.value) || 4;
+            }
+            
+            // 音量設定の適用
+            function applyVolume() {
+                const volume = parseFloat(volumeInput.value);
+                startSound.volume = volume;
+                stopSound.volume = volume;
+            }
+            
+            // タイマーモードの切り替え
+            function switchMode(mode) {
+                currentMode = mode;
+                timerOptions.forEach(option => {
+                    if (option.dataset.type === mode) {
+                        option.classList.add('active');
+                    } else {
+                        option.classList.remove('active');
+                    }
+                });
+                
+                resetTimer();
+                
+                if (mode === 'work') {
+                    timeLeft = getWorkTime() * 60;
+                    statusText.textContent = '作業の準備ができました';
+                    timerDisplay.style.color = '#e74c3c';
+                } else if (mode === 'short-break') {
+                    timeLeft = getShortBreakTime() * 60;
+                    statusText.textContent = '短休憩の準備ができました';
+                    timerDisplay.style.color = '#3498db';
+                } else if (mode === 'long-break') {
+                    timeLeft = getLongBreakTime() * 60;
+                    statusText.textContent = '長休憩の準備ができました';
+                    timerDisplay.style.color = '#9b59b6';
+                }
+                
+                updateTimerDisplay(timeLeft);
+            }
+            
+            // タイマーの開始
+            function startTimer() {
+                if (isRunning) return;
+                
+                isRunning = true;
+                isPaused = false;
+                startBtn.disabled = true;
+                pauseBtn.disabled = false;
+                
+                applyVolume();
+                startSound.play();
+                
+                if (currentMode === 'work') {
+                    statusText.textContent = '作業中...';
+                } else if (currentMode === 'short-break') {
+                    statusText.textContent = '短休憩中...';
+                } else if (currentMode === 'long-break') {
+                    statusText.textContent = '長休憩中...';
+                }
+                
+                timer = setInterval(() => {
+                    timeLeft--;
+                    updateTimerDisplay(timeLeft);
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        isRunning = false;
+                        
+                        applyVolume();
+                        stopSound.play();
+                        
+                        if (currentMode === 'work') {
+                            completedCycles++;
+                            cyclesCount.textContent = `完了したサイクル: ${completedCycles}`;
+                            
+                            if (completedCycles % getLongBreakInterval() === 0) {
+                                if (autoStartInput.checked) {
+                                    switchMode('long-break');
+                                    startTimer();
+                                } else {
+                                    switchMode('long-break');
+                                    statusText.textContent = '長休憩の時間です！';
+                                    startBtn.disabled = false;
+                                }
+                            } else {
+                                if (autoStartInput.checked) {
+                                    switchMode('short-break');
+                                    startTimer();
+                                } else {
+                                    switchMode('short-break');
+                                    statusText.textContent = '短休憩の時間です！';
+                                    startBtn.disabled = false;
+                                }
+                            }
+                        } else {
+                            if (autoStartInput.checked) {
+                                switchMode('work');
+                                startTimer();
+                            } else {
+                                switchMode('work');
+                                statusText.textContent = '次の作業の準備ができました！';
+                                startBtn.disabled = false;
+                            }
+                        }
+                    }
+                }, 1000);
+            }
+            
+            // タイマーの一時停止
+            function pauseTimer() {
+                if (!isRunning) return;
+                
+                if (isPaused) {
+                    // 再開
+                    isPaused = false;
+                    pauseBtn.textContent = '一時停止';
+                    
+                    if (currentMode === 'work') {
+                        statusText.textContent = '作業中...';
+                    } else if (currentMode === 'short-break') {
+                        statusText.textContent = '短休憩中...';
+                    } else if (currentMode === 'long-break') {
+                        statusText.textContent = '長休憩中...';
+                    }
+                    
+                    timer = setInterval(() => {
+                        timeLeft--;
+                        updateTimerDisplay(timeLeft);
+                        
+                        if (timeLeft <= 0) {
+                            clearInterval(timer);
+                            isRunning = false;
+                            
+                            applyVolume();
+                            stopSound.play();
+                            
+                            if (currentMode === 'work') {
+                                completedCycles++;
+                                cyclesCount.textContent = `完了したサイクル: ${completedCycles}`;
+                                
+                                if (completedCycles % getLongBreakInterval() === 0) {
+                                    if (autoStartInput.checked) {
+                                        switchMode('long-break');
+                                        startTimer();
+                                    } else {
+                                        switchMode('long-break');
+                                        statusText.textContent = '長休憩の時間です！';
+                                        startBtn.disabled = false;
+                                    }
+                                } else {
+                                    if (autoStartInput.checked) {
+                                        switchMode('short-break');
+                                        startTimer();
+                                    } else {
+                                        switchMode('short-break');
+                                        statusText.textContent = '短休憩の時間です！';
+                                        startBtn.disabled = false;
+                                    }
+                                }
+                            } else {
+                                if (autoStartInput.checked) {
+                                    switchMode('work');
+                                    startTimer();
+                                } else {
+                                    switchMode('work');
+                                    statusText.textContent = '次の作業の準備ができました！';
+                                    startBtn.disabled = false;
+                                }
+                            }
+                        }
+                    }, 1000);
+                } else {
+                    // 一時停止
+                    clearInterval(timer);
+                    isPaused = true;
+                    pauseBtn.textContent = '再開';
+                    statusText.textContent = '一時停止中';
+                }
+            }
+            
+            // タイマーのリセット
+            function resetTimer() {
+                clearInterval(timer);
+                isRunning = false;
+                isPaused = false;
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                pauseBtn.textContent = '一時停止';
+            }
+            
+            // イベントリスナー
+            startBtn.addEventListener('click', startTimer);
+            pauseBtn.addEventListener('click', pauseTimer);
+            resetBtn.addEventListener('click', () => {
+                resetTimer();
+                switchMode(currentMode);
+            });
+            
+            timerOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    if (!isRunning || confirm('現在のタイマーをリセットしますか？')) {
+                        switchMode(option.dataset.type);
+                    }
+                });
+            });
+            
+            // 設定変更時のイベント
+            workTimeInput.addEventListener('change', () => {
+                if (currentMode === 'work' && !isRunning) {
+                    timeLeft = getWorkTime() * 60;
+                    updateTimerDisplay(timeLeft);
+                }
+            });
+            
+            shortBreakTimeInput.addEventListener('change', () => {
+                if (currentMode === 'short-break' && !isRunning) {
+                    timeLeft = getShortBreakTime() * 60;
+                    updateTimerDisplay(timeLeft);
+                }
+            });
+            
+            longBreakTimeInput.addEventListener('change', () => {
+                if (currentMode === 'long-break' && !isRunning) {
+                    timeLeft = getLongBreakTime() * 60;
+                    updateTimerDisplay(timeLeft);
+                }
+            });
+        });
+        
+        // 通知設定
+        if ('Notification' in window) {
+            Notification.requestPermission();
+        }
+    </script>
+</body>
+</html>
