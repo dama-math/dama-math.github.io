@@ -219,8 +219,9 @@
             const autoStartInput = document.getElementById('auto-start');
             
             // 音声ファイル
-            const startSound = new Audio('start.flac');  // ご自身の音声ファイルパスに変更してください
-            const stopSound = new Audio('stop.mp3');    // ご自身の音声ファイルパスに変更してください
+            const workStartSound = new Audio('work-start.flac');  // 作業開始音
+            const breakStartSound = new Audio('break-start.mp3'); // 休憩開始音
+            const timerCompleteSound = new Audio('timer-complete.mp3'); // タイマー完了音
             
             // タイマー変数
             let timer;
@@ -268,8 +269,9 @@
             // 音量設定の適用
             function applyVolume() {
                 const volume = parseFloat(volumeInput.value);
-                startSound.volume = volume;
-                stopSound.volume = volume;
+                workStartSound.volume = volume;
+                breakStartSound.volume = volume;
+                timerCompleteSound.volume = volume;
             }
             
             // タイマーモードの切り替え
@@ -312,14 +314,14 @@
                 pauseBtn.disabled = false;
                 
                 applyVolume();
-                startSound.play();
                 
+                // モードに応じた開始音を再生
                 if (currentMode === 'work') {
+                    workStartSound.play();
                     statusText.textContent = '作業中...';
-                } else if (currentMode === 'short-break') {
-                    statusText.textContent = '短休憩中...';
-                } else if (currentMode === 'long-break') {
-                    statusText.textContent = '長休憩中...';
+                } else {
+                    breakStartSound.play();
+                    statusText.textContent = currentMode === 'short-break' ? '短休憩中...' : '長休憩中...';
                 }
                 
                 timer = setInterval(() => {
@@ -331,7 +333,7 @@
                         isRunning = false;
                         
                         applyVolume();
-                        stopSound.play();
+                        timerCompleteSound.play();
                         
                         if (currentMode === 'work') {
                             completedCycles++;
@@ -396,7 +398,7 @@
                             isRunning = false;
                             
                             applyVolume();
-                            stopSound.play();
+                            timerCompleteSound.play();
                             
                             if (currentMode === 'work') {
                                 completedCycles++;
