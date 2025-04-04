@@ -152,17 +152,20 @@ function drawDonutChart(percentage) {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height); // キャンバスをクリア
 
-    // 背景の円（薄い灰色）
+    // 背景の円（暗い灰色）
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius - lineWidth / 2, 0, 2 * Math.PI); // 線の中央を通るように半径調整
-    ctx.strokeStyle = '#e0e0e0';
+    /* ctx.strokeStyle = '#e0e0e0'; */ // 明るい色を削除
+    ctx.strokeStyle = '#555555'; // 暗い背景色に変更
     ctx.lineWidth = lineWidth;
     ctx.stroke();
 
     // 残り時間の円弧
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius - lineWidth / 2, startAngle, endAngle);
-    ctx.strokeStyle = isWorkMode ? '#4CAF50' : '#2196F3'; // 作業中は緑、休憩中は青
+    /* ctx.strokeStyle = isWorkMode ? '#4CAF50' : '#2196F3'; */ // デフォルト色を削除
+    // ダークテーマに合わせた色に変更
+    ctx.strokeStyle = isWorkMode ? '#00bcd4' : '#ff9800'; // 作業中はティール、休憩中はオレンジ
     ctx.lineWidth = lineWidth;
     ctx.lineCap = 'round'; //線の端を丸める
     ctx.stroke();

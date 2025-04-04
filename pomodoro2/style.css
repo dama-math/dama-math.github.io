@@ -3,23 +3,28 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background-color: #f0f0f0;
+    /* background-color: #f0f0f0; */ /* 明るい背景を削除 */
+    background-color: #1e1e1e; /* 暗い背景色に変更 */
     font-family: sans-serif;
+    color: #e0e0e0; /* デフォルトの文字色を明るく */
 }
 
 .timer-container {
-    background-color: white;
+    /* background-color: white; */ /* 白背景を削除 */
+    background-color: #2d2d2d; /* やや明るいダークグレーに変更 */
     padding: 30px;
     border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    /* box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); */ /* デフォルトの影を調整 */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); /* 少し濃い影に */
     text-align: center;
+    border: 1px solid #444; /* 境界を明確にするボーダー（任意） */
 }
 
 .timer-display {
     position: relative;
     width: 200px;
     height: 200px;
-    margin: 0 auto 20px auto; /* 中央寄せと下のマージン */
+    margin: 0 auto 20px auto;
 }
 
 #timer-canvas {
@@ -34,19 +39,20 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 2.5em;
-    color: #333;
-    /* ドーナツの中央に来るように微調整が必要な場合がある */
-    line-height: 1; /* 行の高さを調整 */
-    margin-top: -5px; /* モード表示との間隔調整 */
-
+    /* color: #333; */ /* デフォルト色を削除 */
+    color: #ffffff; /* 時間表示を白に */
+    line-height: 1;
+    margin-top: -5px;
 }
+
 #mode-display {
     position: absolute;
-    top: 70%; /* 時間表示の下に配置 */
+    top: 70%;
     left: 50%;
     transform: translateX(-50%);
     font-size: 1em;
-    color: #666;
+    /* color: #666; */ /* デフォルト色を削除 */
+    color: #bdbdbd; /* モード表示を明るいグレーに */
 }
 
 
@@ -57,27 +63,41 @@ body {
     cursor: pointer;
     border: none;
     border-radius: 5px;
-    background-color: #4CAF50;
-    color: white;
+    /* background-color: #4CAF50; */ /* デフォルト色を削除 */
+    background-color: #4a4a4a; /* ボタンの背景をグレーに */
+    color: #e0e0e0; /* ボタンの文字色を明るく */
     transition: background-color 0.3s ease;
 }
 
 .controls button:hover {
-    background-color: #45a049;
+    /* background-color: #45a049; */ /* デフォルト色を削除 */
+    background-color: #616161; /* ホバー時少し明るく */
 }
 
+/* 開始/一時停止ボタンの色を少し変える場合（任意） */
+#start-pause-button {
+     background-color: #00838f; /* ティール系の色 */
+}
+#start-pause-button:hover {
+     background-color: #0097a7;
+}
+
+
 #reset-button {
-    background-color: #f44336;
+    /* background-color: #f44336; */ /* デフォルト色を削除 */
+    background-color: #b71c1c; /* 暗めの赤 */
 }
 
 #reset-button:hover {
-    background-color: #da190b;
+    /* background-color: #da190b; */ /* デフォルト色を削除 */
+    background-color: #d32f2f; /* ホバー時少し明るく */
 }
 
 .settings {
     margin-top: 20px;
     font-size: 0.9em;
-    color: #555;
+    /* color: #555; */ /* デフォルト色を削除 */
+    color: #bdbdbd; /* 設定ラベルの色を明るいグレーに */
 }
 
 .settings label {
@@ -87,7 +107,21 @@ body {
 .settings input {
     width: 50px;
     padding: 5px;
-    border: 1px solid #ccc;
+    /* border: 1px solid #ccc; */ /* デフォルト枠線を削除 */
+    border: 1px solid #555; /* 暗めのボーダー */
     border-radius: 3px;
     text-align: center;
+    background-color: #3a3a3a; /* 入力欄の背景を暗く */
+    color: #e0e0e0; /* 入力欄の文字色を明るく */
+}
+
+/* 入力欄のSpinボタン（上下矢印）の色を調整（ブラウザ依存あり） */
+.settings input::-webkit-inner-spin-button,
+.settings input::-webkit-outer-spin-button {
+    /* Appearanceをnoneにすると消せるが、色を変えるのは難しい場合がある */
+    /* filter: invert(1) brightness(0.8); */ /* 色反転などで試す */
+}
+/* Firefox用 */
+.settings input[type=number] {
+  -moz-appearance: textfield; /* デフォルトの矢印を消す場合 */
 }
