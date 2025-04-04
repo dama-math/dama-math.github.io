@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ポモドーロタイマー</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            text-align: center;
+            width: 350px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .timer-display {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 2rem;
+        }
+        
+        .timer-circle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .time {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .status {
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.8rem 1.5rem;
+            transition: background-color 0.3s ease;
+        }
+        
+        button:hover {
+            background-color: #3e8e41;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .reset {
+            background-color: #f44336;
+        }
+        
+        .reset:hover {
+            background-color: #d32f2f;
+        }
+        
+        .settings {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .settings label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .settings input {
+            width: 60px;
+            padding: 0.3rem;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ポモドーロタイマー</h1>
+        <div class="timer-display">
+            <svg class="timer-circle" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#eeeeee" stroke-width="10" />
+                <circle id="progress-ring" cx="50" cy="50" r="45" fill="none" stroke="#4CAF50" stroke-width="10" stroke-dasharray="282.74" stroke-dashoffset="0" transform="rotate(-90 50 50)" />
+            </svg>
+            <div class="time" id="time">25:00</div>
+        </div>
+        <div class="status" id="status">作業時間</div>
+        <div class="buttons">
+            <button id="startBtn">開始</button>
+            <button id="pauseBtn" disabled>一時停止</button>
+            <button id="resetBtn" class="reset">リセット</button>
+        </div>
+        <div class="settings">
+            <label>
+                作業時間 (分):
+                <input type="number" id="workTime" min="1" max="60" value="25">
+            </label>
+            <label>
+                短い休憩 (分):
+                <input type="number" id="shortBreakTime" min="1" max="30" value="5">
+            </label>
+            <label>
+                長い休憩 (分):
+                <input type="number" id="longBreakTime" min="1" max="60" value="15">
+            </label>
+            <label>
+                セッション数:
+                <input type="number" id="sessions" min="1" max="10" value="4">
+            </label>
+        </div>
+    </div>
+
+    <audio id="workSound" src="work-start.flac"></audio>
+    <audio id="breakSound" src="break-start.mp3"></audio>
+
+    <script>
+        // DOM要素
+        const timeDisplay = document.getElementById('time');
+        const statusDisplay = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const progressRing = document.getElementById('progress-ring');
+        const workSound = document.getElementById('workSound');
+        const breakSound = document.getElementById('breakSound');
+
+        // 設定要素
+        const workTimeInput = document.getElementById('workTime');
+        const shortBreakTimeInput = document.getElementById('shortBreakTime');
+        const longBreakTimeInput = document.getElementById('longBreakTime');
+        const sessionsInput = document.getElementById('sessions');
+
+        // ステート変数
+        let timerInterval;
+        let isRunning = false;
+        let isPaused = false;
+        let currentMode = 'work'; // 'work', 'shortBreak', 'longBreak'
+        let currentSession = 1;
+        let currentTime;
+        let endTime;
+
+        // 定数
+        const CIRCLE_CIRCUMFERENCE = 282.74; // 2 * Math.PI * 45
+
+        // LocalStorageキー
+        const STORAGE_KEY = 'pomodoroState';
+
+        // 音声を設定するプレースホルダーメッセージ
+        alert('音声ファイルをセットするには、workSound と breakSound の src 属性を設定してください。');
+
+        // 初期化
+        function init() {
+            loadStateFromStorage();
+            updateDisplay();
+            updateButtons();
+            setupEventListeners();
+        }
+
+        // イベントリスナーのセットアップ
+        function setupEventListeners() {
+            startBtn.addEventListener('click', startTimer);
+            pauseBtn.addEventListener('click', pauseTimer);
+            resetBtn.addEventListener('click', resetTimer);
+
+            // ページを離れる前にステートを保存
+            window.addEventListener('beforeunload', saveStateToStorage);
+        }
+
+        // タイマーを開始
+        function startTimer() {
+            if (!isRunning) {
+                // 新しいタイマーを開始
+                const duration = getDurationForCurrentMode();
+                currentTime = duration * 60;
+                endTime = Date.now() + currentTime * 1000;
+                
+                // モードに応じた音を再生
+                if (currentMode === 'work') {
+                    workSound.play().catch(e => console.log('音声再生エラー:', e));
+                } else {
+                    breakSound.play().catch(e => console.log('音声再生エラー:', e));
+                }
+            } else if (isPaused) {
+                // 一時停止からの再開
+                endTime = Date.now() + currentTime * 1000;
+            }
+
+            isRunning = true;
+            isPaused = false;
+            
+            // タイマーの開始
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            updateButtons();
+            saveStateToStorage();
+        }
+
+        // タイマーを一時停止
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            isPaused = true;
+            updateButtons();
+            saveStateToStorage();
+        }
+
+        // タイマーをリセット
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            isPaused = false;
+            currentMode = 'work';
+            currentSession = 1;
+            currentTime = getDurationForCurrentMode() * 60;
+            
+            updateDisplay();
+            updateButtons();
+            saveStateToStorage();
+        }
+
+        // タイマーを更新
+        function updateTimer() {
+            const now = Date.now();
+            currentTime = Math.max(0, Math.ceil((endTime - now) / 1000));
+
+            if (currentTime <= 0) {
+                // タイマー終了時の処理
+                clearInterval(timerInterval);
+                isRunning = false;
+                
+                // 次のモードに移行
+                moveToNextMode();
+                
+                // 新しいモードでタイマーを自動的に開始
+                startTimer();
+            } else {
+                updateDisplay();
+                saveStateToStorage();
+            }
+        }
+
+        // 次のモードに移行
+        function moveToNextMode() {
+            if (currentMode === 'work') {
+                // 作業後は休憩へ
+                if (currentSession >= parseInt(sessionsInput.value)) {
+                    currentMode = 'longBreak';
+                    currentSession = 1;
+                } else {
+                    currentMode = 'shortBreak';
+                    currentSession++;
+                }
+            } else {
+                // 休憩後は作業へ
+                currentMode = 'work';
+            }
+
+            currentTime = getDurationForCurrentMode() * 60;
+            updateDisplay();
+        }
+
+        // 現在のモードに応じた時間(分)を取得
+        function getDurationForCurrentMode() {
+            switch (currentMode) {
+                case 'work':
+                    return parseInt(workTimeInput.value);
+                case 'shortBreak':
+                    return parseInt(shortBreakTimeInput.value);
+                case 'longBreak':
+                    return parseInt(longBreakTimeInput.value);
+                default:
+                    return 25;
+            }
+        }
+
+        // 表示を更新
+        function updateDisplay() {
+            // 時間表示
+            const minutes = Math.floor(currentTime / 60);
+            const seconds = currentTime % 60;
+            timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // ステータス表示
+            if (currentMode === 'work') {
+                statusDisplay.textContent = `作業時間 (${currentSession}/${sessionsInput.value})`;
+                progressRing.setAttribute('stroke', '#4CAF50'); // 緑色
+            } else if (currentMode === 'shortBreak') {
+                statusDisplay.textContent = '短い休憩';
+                progressRing.setAttribute('stroke', '#2196F3'); // 青色
+            } else {
+                statusDisplay.textContent = '長い休憩';
+                progressRing.setAttribute('stroke', '#9C27B0'); // 紫色
+            }
+            
+            // プログレスリングの更新
+            const totalSeconds = getDurationForCurrentMode() * 60;
+            const dashOffset = CIRCLE_CIRCUMFERENCE * (1 - currentTime / totalSeconds);
+            progressRing.style.strokeDashoffset = dashOffset;
+        }
+
+        // ボタンの状態を更新
+        function updateButtons() {
+            startBtn.disabled = isRunning && !isPaused;
+            pauseBtn.disabled = !isRunning || isPaused;
+            
+            // タイマー実行中は設定変更を禁止
+            const settingsDisabled = isRunning || isPaused;
+            workTimeInput.disabled = settingsDisabled;
+            shortBreakTimeInput.disabled = settingsDisabled;
+            longBreakTimeInput.disabled = settingsDisabled;
+            sessionsInput.disabled = settingsDisabled;
+        }
+
+        // LocalStorageにステートを保存
+        function saveStateToStorage() {
+            const state = {
+                isRunning,
+                isPaused,
+                currentMode,
+                currentSession,
+                currentTime,
+                endTime: isRunning && !isPaused ? endTime : null,
+                settings: {
+                    workTime: workTimeInput.value,
+                    shortBreakTime: shortBreakTimeInput.value,
+                    longBreakTime: longBreakTimeInput.value,
+                    sessions: sessionsInput.value
+                }
+            };
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        // LocalStorageからステートを読み込み
+        function loadStateFromStorage() {
+            try {
+                const savedState = localStorage.getItem(STORAGE_KEY);
+                
+                if (savedState) {
+                    const state = JSON.parse(savedState);
+                    
+                    // 設定の復元
+                    workTimeInput.value = state.settings.workTime;
+                    shortBreakTimeInput.value = state.settings.shortBreakTime;
+                    longBreakTimeInput.value = state.settings.longBreakTime;
+                    sessionsInput.value = state.settings.sessions;
+                    
+                    // ステートの復元
+                    currentMode = state.currentMode;
+                    currentSession = state.currentSession;
+                    
+                    // タイマーが実行中だった場合
+                    if (state.isRunning && !state.isPaused && state.endTime) {
+                        const now = Date.now();
+                        currentTime = Math.max(0, Math.ceil((state.endTime - now) / 1000));
+                        
+                        if (currentTime > 0) {
+                            isRunning = true;
+                            endTime = state.endTime;
+                            timerInterval = setInterval(updateTimer, 1000);
+                        } else {
+                            // 実行中だったが既に終了していた場合
+                            currentTime = getDurationForCurrentMode() * 60;
+                        }
+                    } else if (state.isPaused) {
+                        // 一時停止中だった場合
+                        isPaused = true;
+                        currentTime = state.currentTime;
+                    } else {
+                        // 停止中だった場合
+                        currentTime = getDurationForCurrentMode() * 60;
+                    }
+                } else {
+                    // 初めての実行の場合
+                    currentTime = getDurationForCurrentMode() * 60;
+                }
+            } catch (error) {
+                console.error('ステート読み込みエラー:', error);
+                currentTime = getDurationForCurrentMode() * 60;
+            }
+            
+            // プログレスリングの初期設定
+            progressRing.style.strokeDasharray = CIRCLE_CIRCUMFERENCE;
+        }
+
+        // 初期化実行
+        init();
+    </script>
+</body>
+</html>

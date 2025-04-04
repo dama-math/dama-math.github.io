@@ -1,0 +1,93 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+    font-family: sans-serif;
+}
+
+.timer-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.timer-display {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 20px auto; /* 中央寄せと下のマージン */
+}
+
+#timer-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#time-left {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5em;
+    color: #333;
+    /* ドーナツの中央に来るように微調整が必要な場合がある */
+    line-height: 1; /* 行の高さを調整 */
+    margin-top: -5px; /* モード表示との間隔調整 */
+
+}
+#mode-display {
+    position: absolute;
+    top: 70%; /* 時間表示の下に配置 */
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1em;
+    color: #666;
+}
+
+
+.controls button {
+    padding: 10px 20px;
+    font-size: 1em;
+    margin: 5px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+.controls button:hover {
+    background-color: #45a049;
+}
+
+#reset-button {
+    background-color: #f44336;
+}
+
+#reset-button:hover {
+    background-color: #da190b;
+}
+
+.settings {
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.settings label {
+    margin: 0 5px 0 10px;
+}
+
+.settings input {
+    width: 50px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    text-align: center;
+}
