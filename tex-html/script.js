@@ -49,7 +49,12 @@ function updatePreview() {
         .replace(/\\begin{enumerate}/g, '<ol>')
         .replace(/\\end{enumerate}/g, '</ol>')
         .replace(/\\item/g, '<li>')
-        .replace(/\\textbf{([^}]+)}/g, '<strong>$1</strong>');  // 太字
+        .replace(/\\textbf{([^}]+)}/g, '<strong>$1</strong>')
+		.replace(/\\section{([^}]+)}/g, '<h2>$1</h2>')
+		.replace(/\\section\*{([^}]+)}/g, '<h2>$1</h2>')
+		.replace(/\\subsection{([^}]+)}/g, '<h3>$1</h3>')
+		.replace(/\\subsection\*{([^}]+)}/g, '<h3>$1</h3>')
+		;
 
     // 数式デリミタの前後にスペースを追加
     editorText = editorText
@@ -71,10 +76,17 @@ function updatePreview() {
     });
 
     // 改行を <br> タグに変換
-    const formattedText = editorText.replace(/\n/g, '<br>');
+    editorText = editorText
+		.replace(/\n/g, '<br>')
+		.replace(/(<\/h[2-6]>)(<br>)+/g, '$1')
+		.replace(/<ul><br>/g, '<ul>')
+		.replace(/<ol><br>/g, '<ol>')
+		.replace(/<\/ul><br>/g, '<\/ul>')
+		.replace(/<\/ol><br>/g, '<\/ol>')
+		.replace(/\\]<br>/g, '\\]');
 
     // KaTeXでレンダリング（$$、$、\[\]、\(\)、align、align*にも対応）
-    previewElement.innerHTML = formattedText;
+    previewElement.innerHTML = editorText;
     renderMathInElement(previewElement, {
         delimiters: [
             {left: "$$", right: "$$", display: true},
