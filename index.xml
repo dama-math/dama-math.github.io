@@ -4,7 +4,7 @@
     <title>Home on dama&#39;s homepage</title>
     <link>http://dama-math.github.io/</link>
     <description>Recent content in Home on dama&#39;s homepage</description>
-    <generator>Hugo -- gohugo.io</generator>
+    <generator>Hugo</generator>
     <language>ja</language>
     <atom:link href="http://dama-math.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
@@ -12,7 +12,14 @@
       <link>http://dama-math.github.io/about/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       <guid>http://dama-math.github.io/about/</guid>
-      <description>About Me 京都大学大学院理学研究科数学専攻の兒玉太陽です。 Twitter&#xA;Interest 表現論に興味を持っています。 現在は幾何学的表現論を勉強中です。 指導教員は加藤周先生です。&#xA;Past Glory 2016 JJMO 銅賞 2017 数学甲子園 第4位 2018 JMO 銅賞 2018 APMO 銀賞 2019 JMO 銅賞 2019 科学の甲子園 優勝 2019 IMO 金賞 2019 数学甲子園 第4位 About My Icon アイコンは@V_Melvilleさんよりいただきました。 ありがとうございます！</description>
+      <description>&lt;h2 id=&#34;about-me&#34;&gt;About Me&lt;/h2&gt;&#xA;&lt;figure class=&#34;avatar&#34;&gt;&lt;img src=&#34;http://dama-math.github.io/avatar.jpg&#34;&gt;&#xA;&lt;/figure&gt;&#xA;&#xA;&lt;p&gt;京都大学理学研究科博士2年の兒玉太陽です。&#xA;指導教員は加藤周先生で、幾何学的表現論を専攻しています。&#xA;&lt;a href=&#34;https://x.com/dama_math&#34;&gt;X&lt;/a&gt;&lt;/p&gt;&#xA;&lt;h2 id=&#34;past-glory&#34;&gt;Past Glory&lt;/h2&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;2016 JJMO 銅賞&lt;/li&gt;&#xA;&lt;li&gt;2017 数学甲子園 第4位&lt;/li&gt;&#xA;&lt;li&gt;2018 JMO 銅賞&lt;/li&gt;&#xA;&lt;li&gt;2018 APMO 銀賞&lt;/li&gt;&#xA;&lt;li&gt;2019 JMO 銅賞&lt;/li&gt;&#xA;&lt;li&gt;2019 科学の甲子園 優勝&lt;/li&gt;&#xA;&lt;li&gt;2019 IMO 金賞&lt;/li&gt;&#xA;&lt;li&gt;2019 数学甲子園 第4位&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h2 id=&#34;publication&#34;&gt;Publication&lt;/h2&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://www.nippyo.co.jp/shop/book/8967.html&#34;&gt;数学オリンピック幾何への挑戦 ユークリッド幾何学をめぐる船旅&lt;/a&gt;&lt;/p&gt;&#xA;&lt;h2 id=&#34;about-my-icon&#34;&gt;About My Icon&lt;/h2&gt;&#xA;&lt;p&gt;アイコンは&lt;a href=&#34;https://twitter.com/v_Melville&#34;&gt;@V_Melville&lt;/a&gt;さんよりいただきました。&#xA;ありがとうございます！&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Contact</title>
+      <link>http://dama-math.github.io/contact/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://dama-math.github.io/contact/</guid>
+      <description>&lt;ul&gt;&#xA;&lt;li&gt;Email: &lt;a href=&#34;mailto:foo@xyz.com&#34;&gt;foo@xyz.com&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;Phone: &lt;a href=&#34;tel:+91-123123&#34;&gt;+91-123123&lt;/a&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;hr&gt;&#xA;&lt;h2 id=&#34;mailing-address&#34;&gt;Mailing Address&lt;/h2&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;221B, Baker Street&lt;/p&gt;&#xA;&lt;p&gt;London&lt;/p&gt;&#xA;&lt;p&gt;United Kingdom&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;hr&gt;&#xA;&lt;h2 id=&#34;social&#34;&gt;Social&lt;/h2&gt;&#xA;&lt;ol&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#&#34;&gt;Facebook&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#&#34;&gt;Twitter&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#&#34;&gt;Google+&lt;/a&gt;&lt;/li&gt;&#xA;&lt;/ol&gt;</description>
     </item>
   </channel>
 </rss>
