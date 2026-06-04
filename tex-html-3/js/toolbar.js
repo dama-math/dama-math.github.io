@@ -1,59 +1,63 @@
 /**
  * toolbar.js — ツールバーボタンのアクション定義
  *
- * 各アクションは選択範囲があればラップ、なければテンプレートを挿入し
- * カーソルを適切な位置（{} の内側など）に置く。
+ * 各アクションは選択範囲があればラップ、なければテンプレートを挿入する。
+ * Fix #4/#11: カーソル位置をマジックナンバーで指定するのをやめ、
+ *             CURSOR マーカー（\x00）をテンプレートに埋め込む方式に変更。
+ *             これにより cursorOffset の手動管理が不要になる。
  */
 
 import { EditorSelection } from '@codemirror/state';
 
+/**
+ * 選択なし時のカーソル位置を示すマーカー文字（null byte）。
+ * 挿入直前にテキストから除去し、その位置にカーソルを置く。
+ */
+const CURSOR = '\x00';
+
 /* ================================================================
    アクション定義
-   wrap(selectedText):  挿入テキストを返す（選択あり / なしで分岐）
-   cursorOffset:        選択なし時のカーソル位置（文字列先頭からのオフセット）
+   wrap(selectedText):
+     selectedText が空文字列 → テンプレート文字列（CURSOR マーカー含む）
+     selectedText が非空     → 選択テキストをラップした文字列
    ================================================================ */
 const ACTIONS = {
   textbf: {
-    wrap: s => s ? `\\textbf{${s}}` : '\\textbf{}',
-    cursorOffset: 8,  // \textbf{ の次
+    wrap: s => s ? `\\textbf{${s}}` : `\\textbf{${CURSOR}}`,
   },
   textit: {
-    wrap: s => s ? `\\textit{${s}}` : '\\textit{}',
-    cursorOffset: 8,
+    wrap: s => s ? `\\textit{${s}}` : `\\textit{${CURSOR}}`,
   },
   section: {
-    wrap: s => s ? `\\section{${s}}` : '\\section{}',
-    cursorOffset: 9,
+    wrap: s => s ? `\\section{${s}}` : `\\section{${CURSOR}}`,
   },
   subsection: {
-    wrap: s => s ? `\\subsection{${s}}` : '\\subsection{}',
-    cursorOffset: 12,
+    wrap: s => s ? `\\subsection{${s}}` : `\\subsection{${CURSOR}}`,
   },
+  // Fix #4: inline-math の cursorOffset が誤っていた問題を CURSOR マーカーで解決
+  //         選択なし: $|$ （| = カーソル位置）
   'inline-math': {
-    wrap: s => s ? `$${s}$` : '$  $',
-    cursorOffset: 1,
+    wrap: s => s ? `$${s}$` : `$${CURSOR}$`,
   },
+  // Fix #13: コメントが誤っていた display-math も CURSOR マーカーに統一
+  //          選択なし: \[\n|\n\]（| = 空行の先頭）
   'display-math': {
-    wrap: s => s ? `\\[\n${s}\n\\]` : '\\[\n\n\\]',
-    cursorOffset: 3,  // \[ の後の改行の次
+    wrap: s => s ? `\\[\n${s}\n\\]` : `\\[\n${CURSOR}\n\\]`,
   },
   align: {
     wrap: s => s
       ? `\\begin{align*}\n${s}\n\\end{align*}`
-      : '\\begin{align*}\n\n\\end{align*}',
-    cursorOffset: 15, // \begin{align*}\n の次
+      : `\\begin{align*}\n${CURSOR}\n\\end{align*}`,
   },
   itemize: {
     wrap: s => s
       ? `\\begin{itemize}\n\\item ${s}\n\\end{itemize}`
-      : '\\begin{itemize}\n\\item \n\\end{itemize}',
-    cursorOffset: 22, // \\item の後
+      : `\\begin{itemize}\n\\item ${CURSOR}\n\\end{itemize}`,
   },
   enumerate: {
     wrap: s => s
       ? `\\begin{enumerate}\n\\item ${s}\n\\end{enumerate}`
-      : '\\begin{enumerate}\n\\item \n\\end{enumerate}',
-    cursorOffset: 24,
+      : `\\begin{enumerate}\n\\item ${CURSOR}\n\\end{enumerate}`,
   },
 };
 
@@ -80,6 +84,10 @@ export function initToolbar(getView) {
 
 /**
  * アクションをエディターに適用する
+ *
+ * Fix #11: テンプレート内の CURSOR マーカーの位置を自動計算するため、
+ *          マジックナンバーの cursorOffset が不要になった。
+ *
  * @param {import('@codemirror/view').EditorView} view
  * @param {string} action
  */
@@ -90,12 +98,19 @@ function _applyAction(view, action) {
   const { state } = view;
   const sel          = state.selection.main;
   const selectedText = state.doc.sliceString(sel.from, sel.to);
-  const insertion    = def.wrap(selectedText);
 
-  // カーソル位置: 選択範囲があれば挿入後末尾、なければ定義オフセット
-  const cursorPos = selectedText
-    ? sel.from + insertion.length
-    : sel.from + def.cursorOffset;
+  let insertion = def.wrap(selectedText);
+  let cursorPos;
+
+  if (selectedText) {
+    // 選択範囲あり: 挿入テキスト末尾にカーソル
+    cursorPos = sel.from + insertion.length;
+  } else {
+    // 選択範囲なし: CURSOR マーカーを除去し、その位置にカーソルを置く
+    const markerIdx = insertion.indexOf(CURSOR);
+    insertion = insertion.replace(CURSOR, '');
+    cursorPos = sel.from + (markerIdx !== -1 ? markerIdx : insertion.length);
+  }
 
   view.dispatch({
     changes:   { from: sel.from, to: sel.to, insert: insertion },

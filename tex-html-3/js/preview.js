@@ -16,8 +16,8 @@ export function renderPreview(text) {
 
   let html = text;
 
-  // < > をエンティティに変換（XSS対策 & HTML衝突防止）
-  html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Fix #5: & を先に変換してから < > を変換する（逆順だと &lt; が二重エスケープされる）
+  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   // ─── LaTeX 環境 → HTML 変換 ────────────────────────────────
   html = html

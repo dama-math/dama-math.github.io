@@ -34,7 +34,7 @@ import { loadTabs }                                       from './storage.js';
 import { initTabs, addTab, syncCurrentContent,
          getCurrentTab }                                  from './tabs.js';
 import { renderPreview }                                  from './preview.js';
-import { latexCompletionSource }                          from './snippets.js';
+import { atSnippetSource, wordSnippetSource }             from './snippets.js';
 import { initToolbar }                                    from './toolbar.js';
 import { exportAsTxt }                                    from './export.js';
 
@@ -50,53 +50,57 @@ let editorView = null;
  */
 const tabStateCache = new Map();
 
-/**
- * 現在表示しているタブの ID
- * null は初期化前を示す（最初のタブ切り替え時に保存スキップ）
- * @type {string | null}
- */
-let currentTabId = null;
-
 // ─── スクロール同期状態 ────────────────────────────────────────
 
-let isSyncingLeft = false;
-let isSyncingRight = false;
+// タイムスタンプ方式: rAF + ブール値フラグより安定した双方向フィードバック防止。
+// ・rAF はフレーム単位（~16ms）でリセットするが、ブラウザが scroll イベントを
+//   rAF 後に非同期発火すると、フラグが既に false になりフィードバックループが起きる。
+// ・特にコンテンツ上端/下端付近で顕著（scrollTop が境界値に張り付く際に連鎖発生）。
+// ・タイムスタンプ + ガード時間方式なら、どのタイミングで scroll が来ても安全。
+let _lastEditorSync  = 0; // エディター → プレビュー の最終同期 timestamp
+let _lastPreviewSync = 0; // プレビュー → エディター の最終同期 timestamp
+const SCROLL_GUARD_MS = 100; // フィードバック防止ガード時間（ms）
 
 function syncScrollToPreview(cmScroller) {
-  if (isSyncingRight) {
-    isSyncingRight = false;
-    return;
-  }
+  // プレビュー → エディター の同期から GUARD 時間内なら無視（フィードバック防止）
+  if (performance.now() - _lastPreviewSync < SCROLL_GUARD_MS) return;
+
   const previewPane = document.getElementById('preview-pane');
   if (!previewPane) return;
-  
+
   const maxCmScroll = cmScroller.scrollHeight - cmScroller.clientHeight;
   if (maxCmScroll <= 0) return;
 
-  const percentage = cmScroller.scrollTop / maxCmScroll;
+  const pct            = cmScroller.scrollTop / maxCmScroll;
   const maxPreviewScroll = previewPane.scrollHeight - previewPane.clientHeight;
-  
-  isSyncingLeft = true;
-  previewPane.scrollTop = maxPreviewScroll * percentage;
+  const newTop         = maxPreviewScroll * pct;
+
+  // 目標位置と現在位置がほぼ同じなら設定しない（不要な scroll イベントを防ぐ）
+  if (Math.abs(previewPane.scrollTop - newTop) < 1) return;
+
+  _lastEditorSync = performance.now();
+  previewPane.scrollTop = newTop;
 }
 
 function syncScrollToEditor(previewPane) {
-  if (isSyncingLeft) {
-    isSyncingLeft = false;
-    return;
-  }
+  // エディター → プレビュー の同期から GUARD 時間内なら無視（フィードバック防止）
+  if (performance.now() - _lastEditorSync < SCROLL_GUARD_MS) return;
   if (!editorView) return;
+
   const cmScroller = editorView.scrollDOM;
   if (!cmScroller) return;
 
   const maxPreviewScroll = previewPane.scrollHeight - previewPane.clientHeight;
   if (maxPreviewScroll <= 0) return;
 
-  const percentage = previewPane.scrollTop / maxPreviewScroll;
+  const pct        = previewPane.scrollTop / maxPreviewScroll;
   const maxCmScroll = cmScroller.scrollHeight - cmScroller.clientHeight;
-  
-  isSyncingRight = true;
-  cmScroller.scrollTop = maxCmScroll * percentage;
+  const newTop     = maxCmScroll * pct;
+
+  if (Math.abs(cmScroller.scrollTop - newTop) < 1) return;
+
+  _lastPreviewSync = performance.now();
+  cmScroller.scrollTop = newTop;
 }
 
 // ─── カスタムテーマ ────────────────────────────────────────────
@@ -206,7 +210,11 @@ function buildExtensions() {
         preventDefault: true,
       },
     ]),
-    // LaTeX用カッコ補完・キーマップ
+    // LaTeX 用括弧補完キーマップ
+    // ・@ プレフィックス: closeBrackets() が閉じ括弧を付加するのを防ぎ、
+    //   @ スニペット補完を正しく動作させる
+    // ・\ プレフィックス: \( \)、\[ \]、\{ \} を挿入する
+    // ・| ハンドラーは closeBrackets のデフォルト対象外のため不要（削除済み）
     keymap.of([
       {
         key: "$",
@@ -216,11 +224,11 @@ function buildExtensions() {
           if (!sel.empty) return false;
           const prevChar = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
           const nextChar = state.doc.sliceString(sel.from, sel.from + 1);
-          
+
           if (prevChar === '$' && nextChar === '$') {
             const changes = state.changeByRange(range => ({
               changes: { from: range.from - 1, to: range.from + 1, insert: "$$\n\n$$" },
-              range: EditorSelection.cursor(range.from + 2)
+              range: EditorSelection.cursor(range.from + 2),
             }));
             view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
             return true;
@@ -231,11 +239,11 @@ function buildExtensions() {
           }
           const changes = state.changeByRange(range => ({
             changes: { from: range.from, insert: "$$" },
-            range: EditorSelection.cursor(range.from + 1)
+            range: EditorSelection.cursor(range.from + 1),
           }));
           view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
           return true;
-        }
+        },
       },
       {
         key: "(",
@@ -245,9 +253,10 @@ function buildExtensions() {
           if (!sel.empty) return false;
           const prev = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
           if (prev === '@') {
+            // @( → 生の ( のみ挿入（補完で @( → \left( \right) を確定できるようにする）
             const changes = state.changeByRange(range => ({
               changes: { from: range.from, insert: "(" },
-              range: EditorSelection.cursor(range.from + 1)
+              range: EditorSelection.cursor(range.from + 1),
             }));
             view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
             return true;
@@ -255,13 +264,13 @@ function buildExtensions() {
           if (prev === '\\') {
             const changes = state.changeByRange(range => ({
               changes: { from: range.from, insert: "( \\)" },
-              range: EditorSelection.cursor(range.from + 1)
+              range: EditorSelection.cursor(range.from + 1),
             }));
             view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
             return true;
           }
           return false;
-        }
+        },
       },
       {
         key: "[",
@@ -273,7 +282,7 @@ function buildExtensions() {
           if (prev === '@') {
             const changes = state.changeByRange(range => ({
               changes: { from: range.from, insert: "[" },
-              range: EditorSelection.cursor(range.from + 1)
+              range: EditorSelection.cursor(range.from + 1),
             }));
             view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
             return true;
@@ -281,13 +290,13 @@ function buildExtensions() {
           if (prev === '\\') {
             const changes = state.changeByRange(range => ({
               changes: { from: range.from, insert: "[ \\]" },
-              range: EditorSelection.cursor(range.from + 1)
+              range: EditorSelection.cursor(range.from + 1),
             }));
             view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
             return true;
           }
           return false;
-        }
+        },
       },
       {
         key: "{",
@@ -299,7 +308,7 @@ function buildExtensions() {
           if (prev === '@') {
             const changes = state.changeByRange(range => ({
               changes: { from: range.from, insert: "{" },
-              range: EditorSelection.cursor(range.from + 1)
+              range: EditorSelection.cursor(range.from + 1),
             }));
             view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
             return true;
@@ -307,32 +316,14 @@ function buildExtensions() {
           if (prev === '\\') {
             const changes = state.changeByRange(range => ({
               changes: { from: range.from, insert: "{ \\}" },
-              range: EditorSelection.cursor(range.from + 1)
+              range: EditorSelection.cursor(range.from + 1),
             }));
             view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
             return true;
           }
           return false;
-        }
+        },
       },
-      {
-        key: "|",
-        run(view) {
-          const { state } = view;
-          const sel = state.selection.main;
-          if (!sel.empty) return false;
-          const prev = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
-          if (prev === '@') {
-            const changes = state.changeByRange(range => ({
-              changes: { from: range.from, insert: "|" },
-              range: EditorSelection.cursor(range.from + 1)
-            }));
-            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
-            return true;
-          }
-          return false;
-        }
-      }
     ]),
     // ─ basicSetup 相当（個別パッケージから手動構築） ─
     lineNumbers(),
@@ -351,10 +342,10 @@ function buildExtensions() {
     closeBrackets(),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     EditorView.lineWrapping,   // 右端で折り返す
-    // LaTeX スニペット補完（@ トリガー）
+    // LaTeX スニペット補完（@ トリガー / ワードトリガーを別ソースで提供）
     autocompletion({
-      override:        [latexCompletionSource],
-      icons:           false,
+      override:         [atSnippetSource, wordSnippetSource],
+      icons:            false,
       activateOnTyping: true,
     }),
     keymap.of([
@@ -385,10 +376,17 @@ function buildExtensions() {
         if (event.target === view.scrollDOM) {
           syncScrollToPreview(event.target);
         }
-      }
+      },
     }),
   ];
 }
+
+/**
+ * Fix #7: エクステンションを一度だけビルドして全タブで共有する。
+ * history() 等のステートは EditorState ごとに独立して保持されるため、
+ * 同一の extension オブジェクトを再利用しても Undo 履歴は混在しない。
+ */
+const EXTENSIONS = buildExtensions();
 
 // ─── エディター初期化 ─────────────────────────────────────────
 
@@ -398,7 +396,7 @@ function createEditor(initialContent) {
 
   const state = EditorState.create({
     doc:        initialContent,
-    extensions: buildExtensions(),
+    extensions: EXTENSIONS,
   });
 
   editorView = new EditorView({
@@ -411,24 +409,27 @@ function createEditor(initialContent) {
 
 /**
  * タブ切り替え時に EditorState を保存・復元する
- * @param {number} _index   新しいタブのインデックス（未使用、IDで管理）
- * @param {string} content  新しいタブのテキスト内容
- * @param {string} tabId    新しいタブの ID
+ *
+ * Fix #12: currentTabId をモジュール変数として管理せず、
+ *          tabs.js から渡される prevTabId を使うことで状態の二重管理を排除する。
+ *
+ * @param {number}      _index    新しいタブのインデックス（未使用、ID で管理）
+ * @param {string}      content   新しいタブのテキスト内容
+ * @param {string}      tabId     新しいタブの ID
+ * @param {string|null} prevTabId 直前に表示していたタブの ID（初回・削除直後は null）
  */
-function onTabSwitch(_index, content, tabId) {
-  // 現在の EditorState を保存（初回は currentTabId が null なのでスキップ）
-  if (currentTabId !== null && editorView) {
-    tabStateCache.set(currentTabId, editorView.state);
+function onTabSwitch(_index, content, tabId, prevTabId) {
+  // 直前のタブの EditorState を保存（null は初回・削除直後のため保存不要）
+  if (prevTabId != null && editorView) {
+    tabStateCache.set(prevTabId, editorView.state);
   }
-
-  currentTabId = tabId;
 
   // 新しいタブの State を取得 or 作成
   let newState = tabStateCache.get(tabId);
   if (!newState) {
     newState = EditorState.create({
       doc:        content,
-      extensions: buildExtensions(),
+      extensions: EXTENSIONS,
     });
   }
 
@@ -445,9 +446,6 @@ function onTabSwitch(_index, content, tabId) {
  */
 function onTabRemove(removedTabId) {
   tabStateCache.delete(removedTabId);
-  if (currentTabId === removedTabId) {
-    currentTabId = null;
-  }
 }
 
 // ─── UI ヘルパー ─────────────────────────────────────────────
@@ -482,14 +480,14 @@ function initResizableDivider() {
   const editorPane = document.getElementById('editor-pane');
   const mainArea   = document.getElementById('main-area');
 
-  let isDragging  = false;
-  let startX      = 0;
-  let startWidth  = 0;
+  let isDragging = false;
+  let startX     = 0;
+  let startWidth = 0;
 
   divider.addEventListener('mousedown', e => {
-    isDragging  = true;
-    startX      = e.clientX;
-    startWidth  = editorPane.getBoundingClientRect().width;
+    isDragging = true;
+    startX     = e.clientX;
+    startWidth = editorPane.getBoundingClientRect().width;
     divider.classList.add('dragging');
     document.body.style.cursor     = 'col-resize';
     document.body.style.userSelect = 'none';
@@ -548,8 +546,8 @@ async function init() {
   // リサイズディバイダー
   initResizableDivider();
 
-  // スクロール同期 (Preview -> Editor)
-  document.getElementById('preview-pane').addEventListener('scroll', (e) => {
+  // スクロール同期 (Preview → Editor)
+  document.getElementById('preview-pane').addEventListener('scroll', e => {
     syncScrollToEditor(e.target);
   });
 }

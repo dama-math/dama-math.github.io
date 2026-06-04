@@ -36,7 +36,9 @@ export function loadTabs() {
 export function saveActiveTabId(id) {
   try {
     localStorage.setItem(ACTIVE_TAB_KEY, id);
-  } catch (err) {}
+  } catch (err) {
+    console.warn('[storage] アクティブタブID保存失敗:', err);
+  }
 }
 
 export function loadActiveTabId() {
