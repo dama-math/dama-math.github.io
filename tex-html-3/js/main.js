@@ -22,13 +22,14 @@ import {
 import {
   foldGutter, foldKeymap,
   syntaxHighlighting, defaultHighlightStyle, bracketMatching,
-  indentOnInput,
+  indentOnInput, StreamLanguage,
 } from '@codemirror/language';
 import { closeBrackets, closeBracketsKeymap,
          autocompletion, completionKeymap,
          acceptCompletion } from '@codemirror/autocomplete';
 import { markdown }    from '@codemirror/lang-markdown';
 import { oneDark }     from '@codemirror/theme-one-dark';
+import { stex }        from '@codemirror/legacy-modes/mode/stex';
 
 import { loadTabs }                                       from './storage.js';
 import { initTabs, addTab, syncCurrentContent,
@@ -144,6 +145,124 @@ function buildExtensions() {
         preventDefault: true,
       },
     ]),
+    // LaTeX用カッコ補完・キーマップ
+    keymap.of([
+      {
+        key: "$",
+        run(view) {
+          const { state } = view;
+          const sel = state.selection.main;
+          if (!sel.empty) return false;
+          const nextChar = state.doc.sliceString(sel.from, sel.from + 1);
+          if (nextChar === '$') {
+            view.dispatch({ selection: { anchor: sel.from + 1 } });
+            return true;
+          }
+          const changes = state.changeByRange(range => ({
+            changes: { from: range.from, insert: "$$" },
+            range: EditorSelection.cursor(range.from + 1)
+          }));
+          view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+          return true;
+        }
+      },
+      {
+        key: "(",
+        run(view) {
+          const { state } = view;
+          const sel = state.selection.main;
+          if (!sel.empty) return false;
+          const prev = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
+          if (prev === '@') {
+            const changes = state.changeByRange(range => ({
+              changes: { from: range.from, insert: "(" },
+              range: EditorSelection.cursor(range.from + 1)
+            }));
+            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+            return true;
+          }
+          if (prev === '\\') {
+            const changes = state.changeByRange(range => ({
+              changes: { from: range.from, insert: "( \\)" },
+              range: EditorSelection.cursor(range.from + 1)
+            }));
+            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+            return true;
+          }
+          return false;
+        }
+      },
+      {
+        key: "[",
+        run(view) {
+          const { state } = view;
+          const sel = state.selection.main;
+          if (!sel.empty) return false;
+          const prev = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
+          if (prev === '@') {
+            const changes = state.changeByRange(range => ({
+              changes: { from: range.from, insert: "[" },
+              range: EditorSelection.cursor(range.from + 1)
+            }));
+            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+            return true;
+          }
+          if (prev === '\\') {
+            const changes = state.changeByRange(range => ({
+              changes: { from: range.from, insert: "[ \\]" },
+              range: EditorSelection.cursor(range.from + 1)
+            }));
+            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+            return true;
+          }
+          return false;
+        }
+      },
+      {
+        key: "{",
+        run(view) {
+          const { state } = view;
+          const sel = state.selection.main;
+          if (!sel.empty) return false;
+          const prev = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
+          if (prev === '@') {
+            const changes = state.changeByRange(range => ({
+              changes: { from: range.from, insert: "{" },
+              range: EditorSelection.cursor(range.from + 1)
+            }));
+            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+            return true;
+          }
+          if (prev === '\\') {
+            const changes = state.changeByRange(range => ({
+              changes: { from: range.from, insert: "{ \\}" },
+              range: EditorSelection.cursor(range.from + 1)
+            }));
+            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+            return true;
+          }
+          return false;
+        }
+      },
+      {
+        key: "|",
+        run(view) {
+          const { state } = view;
+          const sel = state.selection.main;
+          if (!sel.empty) return false;
+          const prev = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
+          if (prev === '@') {
+            const changes = state.changeByRange(range => ({
+              changes: { from: range.from, insert: "|" },
+              range: EditorSelection.cursor(range.from + 1)
+            }));
+            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+            return true;
+          }
+          return false;
+        }
+      }
+    ]),
     // ─ basicSetup 相当（個別パッケージから手動構築） ─
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -175,7 +294,7 @@ function buildExtensions() {
       ...foldKeymap,
       ...completionKeymap,
     ]),
-    markdown(),       // Markdown ベースのシンタックスハイライト
+    StreamLanguage.define(stex), // LaTeXのシンタックスハイライト
     oneDark,          // ベーステーマ
     customTheme,      // カスタム上書き
     // ─ ドキュメント変更ハンドラー ─

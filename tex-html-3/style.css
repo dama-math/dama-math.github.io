@@ -20,11 +20,11 @@
   --accent-h: #9d8ff9;
   --accent-dim: rgba(124, 106, 247, 0.15);
   /* テキスト */
-  --text-0: #f0f6fc;
-  --text-1: #e6edf3;
-  --text-2: #b1bac4;
-  --text-3: #8b949e;
-  --text-4: #484f58;
+  --text-0: #ffffff;
+  --text-1: #f0f6fc;
+  --text-2: #c9d1d9;
+  --text-3: #a1aab5;
+  --text-4: #8b949e;
   /* ステータス */
   --success: #3fb950;
   --error: #f85149;
@@ -96,6 +96,7 @@ body {
   gap: 2px;
   overflow-x: auto;
   flex: 1;
+  padding-left: 8px;
   padding-right: 8px;
   scrollbar-width: none;
 }
@@ -104,13 +105,13 @@ body {
   display: none;
 }
 
-#toolbar-right {
+#toolbar-left {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  padding-left: 10px;
-  border-left: 1px solid var(--border-0);
+  padding-right: 10px;
+  border-right: 1px solid var(--border-0);
 }
 
 /* ツールバーボタン */
@@ -189,7 +190,7 @@ body {
   white-space: nowrap;
   user-select: none;
   min-width: 52px;
-  text-align: right;
+  text-align: left;
 }
 
 /* ================================================================
