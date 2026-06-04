@@ -47,13 +47,13 @@ const ACTIONS = {
     wrap: s => s
       ? `\\begin{itemize}\n\\item ${s}\n\\end{itemize}`
       : '\\begin{itemize}\n\\item \n\\end{itemize}',
-    cursorOffset: 23, // \\item の後
+    cursorOffset: 22, // \\item の後
   },
   enumerate: {
     wrap: s => s
       ? `\\begin{enumerate}\n\\item ${s}\n\\end{enumerate}`
       : '\\begin{enumerate}\n\\item \n\\end{enumerate}',
-    cursorOffset: 25,
+    cursorOffset: 24,
   },
 };
 

@@ -162,6 +162,27 @@ body {
   font-size: 14px;
 }
 
+.tb-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-3);
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font-ui);
+  padding: 0 8px;
+  transition: color var(--t);
+}
+
+.tb-checkbox input {
+  cursor: pointer;
+}
+
+.tb-checkbox:hover {
+  color: var(--text-1);
+}
+
 .tb-export {
   background: var(--accent-dim);
   color: var(--accent-h);
@@ -209,7 +230,7 @@ body {
 #tab-list {
   display: flex;
   align-items: flex-end;
-  flex: 1;
+  flex: 0 1 auto;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -338,7 +359,6 @@ body {
   background: transparent;
   color: var(--text-3);
   border: none;
-  border-left: 1px solid var(--border-0);
   cursor: pointer;
   font-size: 20px;
   font-weight: 300;

@@ -26,8 +26,7 @@ import {
 } from '@codemirror/language';
 import { closeBrackets, closeBracketsKeymap,
          autocompletion, completionKeymap,
-         acceptCompletion } from '@codemirror/autocomplete';
-import { markdown }    from '@codemirror/lang-markdown';
+         acceptCompletion, startCompletion } from '@codemirror/autocomplete';
 import { oneDark }     from '@codemirror/theme-one-dark';
 import { stex }        from '@codemirror/legacy-modes/mode/stex';
 
@@ -57,6 +56,48 @@ const tabStateCache = new Map();
  * @type {string | null}
  */
 let currentTabId = null;
+
+// ─── スクロール同期状態 ────────────────────────────────────────
+
+let isSyncingLeft = false;
+let isSyncingRight = false;
+
+function syncScrollToPreview(cmScroller) {
+  if (isSyncingRight) {
+    isSyncingRight = false;
+    return;
+  }
+  const previewPane = document.getElementById('preview-pane');
+  if (!previewPane) return;
+  
+  const maxCmScroll = cmScroller.scrollHeight - cmScroller.clientHeight;
+  if (maxCmScroll <= 0) return;
+
+  const percentage = cmScroller.scrollTop / maxCmScroll;
+  const maxPreviewScroll = previewPane.scrollHeight - previewPane.clientHeight;
+  
+  isSyncingLeft = true;
+  previewPane.scrollTop = maxPreviewScroll * percentage;
+}
+
+function syncScrollToEditor(previewPane) {
+  if (isSyncingLeft) {
+    isSyncingLeft = false;
+    return;
+  }
+  if (!editorView) return;
+  const cmScroller = editorView.scrollDOM;
+  if (!cmScroller) return;
+
+  const maxPreviewScroll = previewPane.scrollHeight - previewPane.clientHeight;
+  if (maxPreviewScroll <= 0) return;
+
+  const percentage = previewPane.scrollTop / maxPreviewScroll;
+  const maxCmScroll = cmScroller.scrollHeight - cmScroller.clientHeight;
+  
+  isSyncingRight = true;
+  cmScroller.scrollTop = maxCmScroll * percentage;
+}
 
 // ─── カスタムテーマ ────────────────────────────────────────────
 
@@ -99,6 +140,31 @@ const customTheme = EditorView.theme({
   '.cm-searchMatch.cm-searchMatch-selected': {
     backgroundColor: 'rgba(210,153,34,0.5)',
   },
+  '.cm-tooltip.cm-tooltip-autocomplete': {
+    backgroundColor: '#161b22',
+    border: '1px solid #30363d',
+    color: '#c9d1d9',
+  },
+  '.cm-tooltip.cm-tooltip-autocomplete > ul > li': {
+    padding: '4px 8px',
+  },
+  '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+    backgroundColor: '#1f6feb',
+    color: '#ffffff',
+  },
+  '.cm-completionLabel': {
+    color: '#c9d1d9',
+  },
+  '.cm-completionDetail': {
+    color: '#8b949e',
+    fontStyle: 'italic',
+    marginLeft: '8px',
+  },
+  '.cm-completionMatchedText': {
+    textDecoration: 'none',
+    fontWeight: 'bold',
+    color: '#58a6ff',
+  },
 }, { dark: true });
 
 // ─── エクステンション生成 ─────────────────────────────────────
@@ -122,24 +188,19 @@ function buildExtensions() {
         },
       },
       {
-        // Ctrl+S → .txt エクスポート
-        key: 'Ctrl-s',
-        run(view) {
-          const content  = view.state.doc.toString();
-          const tab      = getCurrentTab();
-          const filename = `${tab.name.replace(/[\\/:*?"<>|]/g, '_')}.txt`;
-          exportAsTxt(content, filename);
-          return true;
-        },
-        preventDefault: true,
-      },
-      {
+        // Ctrl+S / Mod-S
         key: 'Mod-s',
         run(view) {
-          const content  = view.state.doc.toString();
-          const tab      = getCurrentTab();
-          const filename = `${tab.name.replace(/[\\/:*?"<>|]/g, '_')}.txt`;
-          exportAsTxt(content, filename);
+          const autoExport = document.getElementById('chk-auto-export')?.checked;
+          if (autoExport) {
+            const content  = view.state.doc.toString();
+            const tab      = getCurrentTab();
+            const filename = `${tab.name.replace(/[\\/:*?"<>|]/g, '_')}.txt`;
+            exportAsTxt(content, filename);
+            showToast(`ダウンロードしました: ${filename}`);
+          } else {
+            showToast('保存しました (Auto-save)');
+          }
           return true;
         },
         preventDefault: true,
@@ -153,7 +214,17 @@ function buildExtensions() {
           const { state } = view;
           const sel = state.selection.main;
           if (!sel.empty) return false;
+          const prevChar = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
           const nextChar = state.doc.sliceString(sel.from, sel.from + 1);
+          
+          if (prevChar === '$' && nextChar === '$') {
+            const changes = state.changeByRange(range => ({
+              changes: { from: range.from - 1, to: range.from + 1, insert: "$$\n\n$$" },
+              range: EditorSelection.cursor(range.from + 2)
+            }));
+            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
+            return true;
+          }
           if (nextChar === '$') {
             view.dispatch({ selection: { anchor: sel.from + 1 } });
             return true;
@@ -304,6 +375,17 @@ function buildExtensions() {
       syncCurrentContent(content);
       updateCharCount(content);
       renderPreview(content);
+
+      if (update.transactions.some(tr => tr.isUserEvent('delete.backward'))) {
+        startCompletion(update.view);
+      }
+    }),
+    EditorView.domEventHandlers({
+      scroll(event, view) {
+        if (event.target === view.scrollDOM) {
+          syncScrollToPreview(event.target);
+        }
+      }
     }),
   ];
 }
@@ -363,6 +445,9 @@ function onTabSwitch(_index, content, tabId) {
  */
 function onTabRemove(removedTabId) {
   tabStateCache.delete(removedTabId);
+  if (currentTabId === removedTabId) {
+    currentTabId = null;
+  }
 }
 
 // ─── UI ヘルパー ─────────────────────────────────────────────
@@ -462,6 +547,11 @@ async function init() {
 
   // リサイズディバイダー
   initResizableDivider();
+
+  // スクロール同期 (Preview -> Editor)
+  document.getElementById('preview-pane').addEventListener('scroll', (e) => {
+    syncScrollToEditor(e.target);
+  });
 }
 
 init().catch(err => console.error('[main] 初期化エラー:', err));

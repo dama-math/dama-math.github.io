@@ -5,7 +5,7 @@
  * ID はセッション間の一意識別子として使用する。
  */
 
-import { saveTabs } from './storage.js';
+import { saveTabs, saveActiveTabId, loadActiveTabId } from './storage.js';
 
 // ─── 定数 ────────────────────────────────────────────────────────
 const DEFAULT_COUNT  = 10;
@@ -57,8 +57,15 @@ export function initTabs({ savedTabs, onSwitch, getContent, onRemove }) {
     );
   }
 
+  let initialIdx = 0;
+  const activeId = loadActiveTabId();
+  if (activeId) {
+    const idx = _tabs.findIndex(t => t.id === activeId);
+    if (idx !== -1) initialIdx = idx;
+  }
+
   _render();
-  _doSwitch(0, false); // 初期タブ選択（現在の内容を保存しない）
+  _doSwitch(initialIdx, false); // 初期タブ選択（現在の内容を保存しない）
 }
 
 /** 現在のタブインデックス */
@@ -94,9 +101,14 @@ export function removeTab(index) {
   if (_tabs.length <= 1) return;
   const removedId = _tabs[index].id;
   _tabs.splice(index, 1);
+  
   // 削除後のインデックス計算
-  const newIdx = Math.min(_currentIdx, _tabs.length - 1);
-  _currentIdx = newIdx;
+  if (index < _currentIdx) {
+    _currentIdx--;
+  } else if (index === _currentIdx) {
+    _currentIdx = Math.min(_currentIdx, _tabs.length - 1);
+  }
+  
   saveTabs(_tabs);
   if (_onRemove) _onRemove(removedId);
   _render();
@@ -114,7 +126,6 @@ export function removeTab(index) {
 export function renameTab(index, name) {
   _tabs[index].name = name.trim() || `${DEFAULT_PREFIX}${index + 1}`;
   saveTabs(_tabs);
-  _render();
 }
 
 // ─── 内部関数 ────────────────────────────────────────────────────
@@ -130,9 +141,17 @@ function _doSwitch(index, saveFirst = true) {
     saveTabs(_tabs);
   }
   _currentIdx = index;
-  _render();
+  
+  // DOMを再生成せず、クラスとaria属性のみ更新する
+  document.querySelectorAll('#tab-list .tab-item').forEach((el, i) => {
+    const isActive = i === _currentIdx;
+    el.classList.toggle('active', isActive);
+    el.setAttribute('aria-selected', String(isActive));
+  });
+
   if (_onSwitch) {
     const tab = _tabs[_currentIdx];
+    saveActiveTabId(tab.id);
     _onSwitch(_currentIdx, tab.content, tab.id);
   }
 }
@@ -234,11 +253,18 @@ function _startRename(tabId) {
     if (done) return;
     done = true;
     renameTab(index, input.value);
+    const newNameEl = document.createElement('span');
+    newNameEl.className = 'tab-name';
+    newNameEl.textContent = _tabs[index].name;
+    input.replaceWith(newNameEl);
   };
   const cancel = () => {
     if (done) return;
     done = true;
-    _render();
+    const newNameEl = document.createElement('span');
+    newNameEl.className = 'tab-name';
+    newNameEl.textContent = _tabs[index].name;
+    input.replaceWith(newNameEl);
   };
 
   input.addEventListener('blur', commit, { once: true });

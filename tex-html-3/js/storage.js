@@ -3,6 +3,7 @@
  */
 
 const STORAGE_KEY = 'tex-editor-v3-tabs';
+const ACTIVE_TAB_KEY = 'tex-editor-v3-active-tab';
 
 /**
  * タブデータを LocalStorage に保存する
@@ -28,6 +29,20 @@ export function loadTabs() {
     return Array.isArray(data) ? data : null;
   } catch (err) {
     console.warn('[storage] 読み込み失敗:', err);
+    return null;
+  }
+}
+
+export function saveActiveTabId(id) {
+  try {
+    localStorage.setItem(ACTIVE_TAB_KEY, id);
+  } catch (err) {}
+}
+
+export function loadActiveTabId() {
+  try {
+    return localStorage.getItem(ACTIVE_TAB_KEY);
+  } catch (err) {
     return null;
   }
 }

@@ -43,10 +43,14 @@ export function renderPreview(text) {
     .replace(/\\begin\{equation\*?\}/g, '\\[')
     .replace(/\\end\{equation\*?\}/g,   '\\]');
 
-  // 数式ブロック内の改行を除去
+  // 数式ブロックをプレースホルダーに退避
+  const mathBlocks = [];
   html = html.replace(
     /(\$\$.*?\$\$|\\\[.*?\\\]|\$.*?\$|\\\(.*?\\\))/gs,
-    m => m.replace(/\n/g, '')
+    m => {
+      mathBlocks.push(m);
+      return `__MATH_BLOCK_${mathBlocks.length - 1}__`;
+    }
   );
 
   // ─── 改行 → <br> ────────────────────────────────────────────
@@ -54,8 +58,18 @@ export function renderPreview(text) {
     .replace(/\n/g, '<br>')
     .replace(/(<\/h[2-6]>)(<br>)+/g, '$1')
     .replace(/<(ul|ol)><br>/g,        '<$1>')
-    .replace(/<\/(ul|ol)><br>/g,      '</$1>')
-    .replace(/\\\]<br>/g,             '\\]');
+    .replace(/<br><\/(ul|ol)>/g,      '</$1>');
+
+  // 数式ブロックを復元
+  html = html.replace(
+    /__MATH_BLOCK_(\d+)__/g,
+    (_, i) => mathBlocks[i]
+  );
+
+  // ディスプレイ数式直後の無駄な改行を除去
+  html = html
+    .replace(/\\\]<br>/g, '\\]')
+    .replace(/\$\$<br>/g, '$$');
 
   preview.innerHTML = html;
 
