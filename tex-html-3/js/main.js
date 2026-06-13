@@ -17,7 +17,7 @@ import {
   history, historyKeymap, defaultKeymap,
 } from '@codemirror/commands';
 import {
-  searchKeymap, highlightSelectionMatches,
+  searchKeymap, highlightSelectionMatches, search
 } from '@codemirror/search';
 import {
   foldGutter, foldKeymap,
@@ -331,6 +331,7 @@ function buildExtensions() {
     highlightSpecialChars(),
     highlightActiveLine(),
     highlightSelectionMatches(),
+    search(),
     history(),
     foldGutter(),
     drawSelection(),
@@ -482,33 +483,57 @@ function initResizableDivider() {
 
   let isDragging = false;
   let startX     = 0;
+  let startY     = 0;
   let startWidth = 0;
+  let startHeight = 0;
+  let isVertical = false;
 
-  divider.addEventListener('mousedown', e => {
+  divider.addEventListener('pointerdown', e => {
     isDragging = true;
     startX     = e.clientX;
-    startWidth = editorPane.getBoundingClientRect().width;
+    startY     = e.clientY;
+    const rect = editorPane.getBoundingClientRect();
+    startWidth = rect.width;
+    startHeight = rect.height;
+    
+    // フレックス方向から現在のレイアウトを判定
+    isVertical = window.getComputedStyle(mainArea).flexDirection === 'column';
+
     divider.classList.add('dragging');
-    document.body.style.cursor     = 'col-resize';
+    document.body.style.cursor     = isVertical ? 'row-resize' : 'col-resize';
     document.body.style.userSelect = 'none';
+    divider.setPointerCapture(e.pointerId);
     e.preventDefault();
   });
 
-  document.addEventListener('mousemove', e => {
+  divider.addEventListener('pointermove', e => {
     if (!isDragging) return;
-    const total    = mainArea.getBoundingClientRect().width;
-    const newWidth = Math.max(160, Math.min(total - 160, startWidth + (e.clientX - startX)));
-    editorPane.style.flex  = 'none';
-    editorPane.style.width = `${newWidth}px`;
+    if (isVertical) {
+      const total    = mainArea.getBoundingClientRect().height;
+      const newHeight = Math.max(100, Math.min(total - 100, startHeight + (e.clientY - startY)));
+      editorPane.style.flex  = 'none';
+      editorPane.style.height = `${newHeight}px`;
+      editorPane.style.width = '';
+    } else {
+      const total    = mainArea.getBoundingClientRect().width;
+      const newWidth = Math.max(160, Math.min(total - 160, startWidth + (e.clientX - startX)));
+      editorPane.style.flex  = 'none';
+      editorPane.style.width = `${newWidth}px`;
+      editorPane.style.height = '';
+    }
   });
 
-  document.addEventListener('mouseup', () => {
+  const onPointerUp = (e) => {
     if (!isDragging) return;
     isDragging = false;
     divider.classList.remove('dragging');
     document.body.style.cursor     = '';
     document.body.style.userSelect = '';
-  });
+    divider.releasePointerCapture(e.pointerId);
+  };
+
+  divider.addEventListener('pointerup', onPointerUp);
+  divider.addEventListener('pointercancel', onPointerUp);
 }
 
 // ─── 初期化 ─────────────────────────────────────────────────
@@ -550,6 +575,19 @@ async function init() {
   document.getElementById('preview-pane').addEventListener('scroll', e => {
     syncScrollToEditor(e.target);
   });
+
+  // 仮想キーボードによるリサイズ時のレイアウト調整
+  if (window.visualViewport) {
+    const onViewportResize = () => {
+      const app = document.getElementById('app');
+      if (app) {
+        app.style.height = `${window.visualViewport.height}px`;
+      }
+      window.scrollTo(0, 0);
+    };
+    window.visualViewport.addEventListener('resize', onViewportResize);
+    onViewportResize();
+  }
 }
 
 init().catch(err => console.error('[main] 初期化エラー:', err));

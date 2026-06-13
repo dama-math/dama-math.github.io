@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>TeXエディター</title>
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="description" content="CodeMirror 6 ベースのリッチな LaTeX エディター with KaTeX プレビュー">
 
   <!-- Google Fonts -->
@@ -43,18 +44,20 @@
       <span id="char-count" aria-label="文字数">0文字</span>
     </div>
     <div id="toolbar-buttons">
-      <button class="tb-btn" data-action="textbf"      title="\textbf{...} 太字"><b>B</b></button>
-      <button class="tb-btn" data-action="textit"      title="\textit{...} 斜体"><i>I</i></button>
+      <button class="tb-btn" data-action="textbf"      title="\textbf{...} 太字" aria-label="太字"><b>B</b></button>
+      <button class="tb-btn" data-action="textit"      title="\textit{...} 斜体" aria-label="斜体"><i>I</i></button>
       <div class="tb-sep" role="separator"></div>
-      <button class="tb-btn" data-action="section"     title="\section{...}">§</button>
-      <button class="tb-btn" data-action="subsection"  title="\subsection{...}">§§</button>
+      <button class="tb-btn" data-action="section"     title="\section{...}" aria-label="セクション">§</button>
+      <button class="tb-btn" data-action="subsection"  title="\subsection{...}" aria-label="サブセクション">§§</button>
       <div class="tb-sep" role="separator"></div>
-      <button class="tb-btn tb-math" data-action="inline-math"  title="インライン数式 $...$">$</button>
-      <button class="tb-btn tb-math" data-action="display-math" title="ディスプレイ数式 \[...\]">$$</button>
-      <button class="tb-btn"         data-action="align"         title="align* 環境">align</button>
+      <button class="tb-btn tb-math" data-action="inline-math"  title="インライン数式 $...$" aria-label="インライン数式">$</button>
+      <button class="tb-btn tb-math" data-action="display-math" title="ディスプレイ数式 \[...\]" aria-label="ディスプレイ数式">$$</button>
+      <button class="tb-btn"         data-action="align"         title="align* 環境" aria-label="align環境">align</button>
       <div class="tb-sep" role="separator"></div>
-      <button class="tb-btn" data-action="itemize"   title="itemize 環境（箇条書き）">• list</button>
-      <button class="tb-btn" data-action="enumerate" title="enumerate 環境（番号付き）">1. list</button>
+      <button class="tb-btn" data-action="itemize"   title="itemize 環境（箇条書き）" aria-label="箇条書き"><li>list</button>
+      <button class="tb-btn" data-action="enumerate" title="enumerate 環境（番号付き）" aria-label="番号付きリスト">1. list</button>
+      <div class="tb-sep" role="separator"></div>
+      <button class="tb-btn" data-action="search"    title="検索・置換 (Ctrl+F)" aria-label="検索と置換">🔍</button>
       <div class="tb-sep" role="separator"></div>
       <label class="tb-checkbox" title="Ctrl+Sでファイル保存（ダウンロード）を行うか">
         <input type="checkbox" id="chk-auto-export">

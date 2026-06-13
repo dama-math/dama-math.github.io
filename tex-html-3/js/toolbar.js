@@ -8,6 +8,7 @@
  */
 
 import { EditorSelection } from '@codemirror/state';
+import { openSearchPanel, closeSearchPanel } from '@codemirror/search';
 
 /**
  * 選択なし時のカーソル位置を示すマーカー文字（null byte）。
@@ -76,6 +77,14 @@ export function initToolbar(getView) {
 
     const view = getView();
     if (!view) return;
+
+    if (action === 'search') {
+      if (!closeSearchPanel(view)) {
+        openSearchPanel(view);
+      }
+      view.focus();
+      return;
+    }
 
     _applyAction(view, action);
     view.focus();
