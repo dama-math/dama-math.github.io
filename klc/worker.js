@@ -1,11 +1,15 @@
-// Patch TextDecoder for resizable ArrayBuffer issue in some browsers
+// Patch TextDecoder for resizable ArrayBuffer issue in some browsers (e.g., Safari throws generic 'Type error')
 const originalDecode = TextDecoder.prototype.decode;
 TextDecoder.prototype.decode = function(input, options) {
     try {
         return originalDecode.call(this, input, options);
     } catch (e) {
-        if (e instanceof TypeError && (e.message.includes('resizable') || e.message.includes('ArrayBufferView'))) {
-            return originalDecode.call(this, input.slice(), options);
+        if (e instanceof TypeError && input && typeof input.slice === 'function') {
+            try {
+                return originalDecode.call(this, input.slice(), options);
+            } catch (fallbackError) {
+                throw e;
+            }
         }
         throw e;
     }
