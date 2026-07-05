@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,7 +11,9 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap"
+    rel="stylesheet">
 
   <!-- KaTeX -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
@@ -22,78 +25,91 @@
   <script type="importmap">
   {
     "imports": {
-      "@codemirror/state":          "https://esm.sh/@codemirror/state@6",
-      "@codemirror/view":           "https://esm.sh/@codemirror/view@6",
-      "@codemirror/commands":       "https://esm.sh/@codemirror/commands@6",
-      "@codemirror/search":         "https://esm.sh/@codemirror/search@6",
-      "@codemirror/language":       "https://esm.sh/@codemirror/language@6",
-      "@codemirror/autocomplete":   "https://esm.sh/@codemirror/autocomplete@6",
-      "@codemirror/lang-markdown":  "https://esm.sh/@codemirror/lang-markdown@6",
-      "@codemirror/theme-one-dark": "https://esm.sh/@codemirror/theme-one-dark@6",
-      "@codemirror/legacy-modes/mode/stex": "https://esm.sh/@codemirror/legacy-modes@6/mode/stex"
+      "@codemirror/state":          "https://esm.sh/@codemirror/state@6?bundle-deps",
+      "@codemirror/view":           "https://esm.sh/@codemirror/view@6?bundle-deps&external=@codemirror/state",
+      "@codemirror/commands":       "https://esm.sh/@codemirror/commands@6?bundle-deps&external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/search":         "https://esm.sh/@codemirror/search@6?bundle-deps&external=@codemirror/state,@codemirror/view",
+      "@codemirror/language":       "https://esm.sh/@codemirror/language@6?bundle-deps&external=@codemirror/state,@codemirror/view",
+      "@codemirror/autocomplete":   "https://esm.sh/@codemirror/autocomplete@6?bundle-deps&external=@codemirror/state,@codemirror/view,@codemirror/language,@codemirror/commands",
+      "@codemirror/lang-markdown":  "https://esm.sh/@codemirror/lang-markdown@6?bundle-deps&external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/theme-one-dark": "https://esm.sh/@codemirror/theme-one-dark@6?bundle-deps&external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/legacy-modes/mode/stex": "https://esm.sh/@codemirror/legacy-modes@6/mode/stex?bundle-deps&external=@codemirror/language"
+    },
+    "scopes": {
+      "https://esm.sh/": {
+        "@codemirror/state":    "https://esm.sh/@codemirror/state@6?bundle-deps",
+        "@codemirror/view":     "https://esm.sh/@codemirror/view@6?bundle-deps&external=@codemirror/state",
+        "@codemirror/language": "https://esm.sh/@codemirror/language@6?bundle-deps&external=@codemirror/state,@codemirror/view",
+        "@codemirror/commands": "https://esm.sh/@codemirror/commands@6?bundle-deps&external=@codemirror/state,@codemirror/view,@codemirror/language"
+      }
     }
   }
   </script>
 </head>
+
 <body>
-<div id="app">
+  <div id="app">
 
-  <!-- ===== ツールバー ===== -->
-  <div id="toolbar" role="toolbar" aria-label="エディタツールバー">
-    <div id="toolbar-left">
-      <span id="char-count" aria-label="文字数">0文字</span>
+    <!-- ===== ツールバー ===== -->
+    <div id="toolbar" role="toolbar" aria-label="エディタツールバー">
+      <div id="toolbar-left">
+        <span id="char-count" aria-label="文字数">0文字</span>
+      </div>
+      <div id="toolbar-buttons">
+        <button class="tb-btn" data-action="textbf" title="\textbf{...} 太字" aria-label="太字"><b>B</b></button>
+        <button class="tb-btn" data-action="textit" title="\textit{...} 斜体" aria-label="斜体"><i>I</i></button>
+        <div class="tb-sep" role="separator"></div>
+        <button class="tb-btn" data-action="section" title="\section{...}" aria-label="セクション">§</button>
+        <button class="tb-btn" data-action="subsection" title="\subsection{...}" aria-label="サブセクション">§§</button>
+        <div class="tb-sep" role="separator"></div>
+        <button class="tb-btn tb-math" data-action="inline-math" title="インライン数式 $...$" aria-label="インライン数式">$</button>
+        <button class="tb-btn tb-math" data-action="display-math" title="ディスプレイ数式 \[...\]"
+          aria-label="ディスプレイ数式">$$</button>
+        <button class="tb-btn" data-action="align" title="align* 環境" aria-label="align環境">align</button>
+        <div class="tb-sep" role="separator"></div>
+        <button class="tb-btn" data-action="itemize" title="itemize 環境（箇条書き）" aria-label="箇条書き">
+          <li>list
+        </button>
+        <button class="tb-btn" data-action="enumerate" title="enumerate 環境（番号付き）" aria-label="番号付きリスト">1. list</button>
+        <div class="tb-sep" role="separator"></div>
+        <button class="tb-btn" data-action="search" title="検索・置換 (Ctrl+F)" aria-label="検索と置換">🔍</button>
+        <div class="tb-sep" role="separator"></div>
+        <label class="tb-checkbox" title="Ctrl+Sでファイル保存（ダウンロード）を行うか">
+          <input type="checkbox" id="chk-auto-export">
+          <span>DL on Ctrl+S</span>
+        </label>
+        <button class="tb-btn tb-export" id="btn-export" title=".txt ファイルとしてエクスポート">⬇ Export</button>
+      </div>
     </div>
-    <div id="toolbar-buttons">
-      <button class="tb-btn" data-action="textbf"      title="\textbf{...} 太字" aria-label="太字"><b>B</b></button>
-      <button class="tb-btn" data-action="textit"      title="\textit{...} 斜体" aria-label="斜体"><i>I</i></button>
-      <div class="tb-sep" role="separator"></div>
-      <button class="tb-btn" data-action="section"     title="\section{...}" aria-label="セクション">§</button>
-      <button class="tb-btn" data-action="subsection"  title="\subsection{...}" aria-label="サブセクション">§§</button>
-      <div class="tb-sep" role="separator"></div>
-      <button class="tb-btn tb-math" data-action="inline-math"  title="インライン数式 $...$" aria-label="インライン数式">$</button>
-      <button class="tb-btn tb-math" data-action="display-math" title="ディスプレイ数式 \[...\]" aria-label="ディスプレイ数式">$$</button>
-      <button class="tb-btn"         data-action="align"         title="align* 環境" aria-label="align環境">align</button>
-      <div class="tb-sep" role="separator"></div>
-      <button class="tb-btn" data-action="itemize"   title="itemize 環境（箇条書き）" aria-label="箇条書き"><li>list</button>
-      <button class="tb-btn" data-action="enumerate" title="enumerate 環境（番号付き）" aria-label="番号付きリスト">1. list</button>
-      <div class="tb-sep" role="separator"></div>
-      <button class="tb-btn" data-action="search"    title="検索・置換 (Ctrl+F)" aria-label="検索と置換">🔍</button>
-      <div class="tb-sep" role="separator"></div>
-      <label class="tb-checkbox" title="Ctrl+Sでファイル保存（ダウンロード）を行うか">
-        <input type="checkbox" id="chk-auto-export">
-        <span>DL on Ctrl+S</span>
-      </label>
-      <button class="tb-btn tb-export" id="btn-export" title=".txt ファイルとしてエクスポート">⬇ Export</button>
+
+    <!-- ===== タブバー ===== -->
+    <div id="tab-bar" role="tablist" aria-label="タブ">
+      <div id="tab-list"></div>
+      <button id="btn-add-tab" title="新しいタブを追加" aria-label="タブを追加">＋</button>
     </div>
+
+    <!-- ===== メインエリア（エディター + プレビュー）===== -->
+    <main id="main-area">
+      <div id="editor-pane" aria-label="LaTeX エディター">
+        <div id="cm-editor"></div>
+      </div>
+      <div id="divider" role="separator" aria-orientation="vertical" aria-label="ペインサイズ変更"></div>
+      <div id="preview-pane" aria-label="プレビュー">
+        <div id="preview"></div>
+      </div>
+    </main>
+
   </div>
 
-  <!-- ===== タブバー ===== -->
-  <div id="tab-bar" role="tablist" aria-label="タブ">
-    <div id="tab-list"></div>
-    <button id="btn-add-tab" title="新しいタブを追加" aria-label="タブを追加">＋</button>
-  </div>
+  <!-- トースト通知 -->
+  <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- ===== メインエリア（エディター + プレビュー）===== -->
-  <main id="main-area">
-    <div id="editor-pane" aria-label="LaTeX エディター">
-      <div id="cm-editor"></div>
-    </div>
-    <div id="divider" role="separator" aria-orientation="vertical" aria-label="ペインサイズ変更"></div>
-    <div id="preview-pane" aria-label="プレビュー">
-      <div id="preview"></div>
-    </div>
-  </main>
+  <!-- KaTeX ランタイム -->
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 
-</div>
-
-<!-- トースト通知 -->
-<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-
-<!-- KaTeX ランタイム -->
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
-
-<!-- アプリ本体（ESM モジュール） -->
-<script type="module" src="js/main.js"></script>
+  <!-- アプリ本体（ESM モジュール） -->
+  <script type="module" src="js/main.js"></script>
 </body>
+
 </html>
