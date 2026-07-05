@@ -69,7 +69,7 @@ export function renderPreview(text) {
   // ディスプレイ数式直後の無駄な改行を除去
   html = html
     .replace(/\\\]<br>/g, '\\]')
-    .replace(/\$\$<br>/g, '$$');
+    .replace(/\$\$<br>/g, '$$$$');
 
   preview.innerHTML = html;
 
