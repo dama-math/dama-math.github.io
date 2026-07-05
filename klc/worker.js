@@ -1,19 +1,32 @@
-// Patch TextDecoder for resizable ArrayBuffer issue in some browsers (e.g., Safari throws generic 'Type error')
-const originalDecode = TextDecoder.prototype.decode;
+// Safari/WebKit compatibility fix for resizable ArrayBuffer issues.
+// New Emscripten versions use wasmMemory.toResizableBuffer() to convert Wasm memory into a
+// resizable ArrayBuffer. Safari's incomplete support causes "TypeError: Type error" when
+// TypedArray views backed by resizable buffers are passed to TextDecoder.decode() or other APIs.
+// By making toResizableBuffer() fail, Emscripten falls back to standard (non-resizable) ArrayBuffer.
+if (typeof WebAssembly !== 'undefined' && WebAssembly.Memory && WebAssembly.Memory.prototype.toResizableBuffer) {
+    // Only patch on Safari / WebKit, where resizable ArrayBuffer support is problematic
+    var isSafari = /^((?!chrome|android).)*safari|AppleWebKit/i.test(self.navigator?.userAgent || '');
+    if (isSafari) {
+        WebAssembly.Memory.prototype.toResizableBuffer = function() {
+            throw new TypeError('Disabled for Safari compatibility');
+        };
+    }
+}
+
+// Secondary safety net: patch TextDecoder for any remaining resizable buffer edge cases
+var _origDecode = TextDecoder.prototype.decode;
 TextDecoder.prototype.decode = function(input, options) {
     try {
-        return originalDecode.call(this, input, options);
+        return _origDecode.call(this, input, options);
     } catch (e) {
         if (e instanceof TypeError && input && typeof input.slice === 'function') {
-            try {
-                return originalDecode.call(this, input.slice(), options);
-            } catch (fallbackError) {
-                throw e;
-            }
+            // Copy into a non-resizable buffer and retry
+            return _origDecode.call(this, input.slice(), options);
         }
         throw e;
     }
 };
+
 
 importScripts('klc.js');
 
