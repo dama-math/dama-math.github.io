@@ -78,6 +78,18 @@ export function initTabs({ savedTabs, onSwitch, getContent, onRemove }) {
 
   _render();
   _doSwitch(initialIdx, false); // 初期タブ選択（現在の内容を保存しない）
+
+  // マウスホイールでの横スクロール対応
+  const list = document.getElementById('tab-list');
+  if (list && !list.dataset.wheelBound) {
+    list.dataset.wheelBound = 'true';
+    list.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        list.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive: false });
+  }
 }
 
 /** 現在のタブインデックス */

@@ -6,6 +6,63 @@
  */
 
 /**
+ * 波括弧のネストを考慮して、LaTeX コマンド（\section{...}, \textbf{...} 等）を安全に置換する。
+ *
+ * @param {string} text - 入力テキスト
+ * @param {string} cmd - コマンド名（例: 'section'）
+ * @param {string|((inner: string) => string)} template - 囲むタグ名（例: 'h2'）またはコールバック関数
+ * @returns {string}
+ */
+function replaceBracedCommand(text, cmd, template) {
+  const prefixRegex = new RegExp(`\\\\${cmd}\\*?\\s*\\{`, 'g');
+  let result = '';
+  let lastIndex = 0;
+  let match;
+
+  while ((match = prefixRegex.exec(text)) !== null) {
+    const matchStart = match.index;
+    const argStart = matchStart + match[0].length;
+    let depth = 1;
+    let i = argStart;
+    const len = text.length;
+
+    while (i < len && depth > 0) {
+      const char = text[i];
+      if (char === '\\') {
+        // エスケープ文字（\{ や \} など）をスキップ
+        i += 2;
+        continue;
+      }
+      if (char === '{') {
+        depth++;
+      } else if (char === '}') {
+        depth--;
+      }
+      i++;
+    }
+
+    if (depth === 0) {
+      const argContent = text.slice(argStart, i - 1);
+      result += text.slice(lastIndex, matchStart);
+      if (typeof template === 'function') {
+        result += template(argContent);
+      } else {
+        result += `<${template}>${argContent}</${template}>`;
+      }
+      lastIndex = i;
+      prefixRegex.lastIndex = i;
+    } else {
+      result += text.slice(lastIndex, argStart);
+      lastIndex = argStart;
+      prefixRegex.lastIndex = argStart;
+    }
+  }
+
+  result += text.slice(lastIndex);
+  return result;
+}
+
+/**
  * LaTeX テキストをプレビュー領域に描画する
  * @param {string} text - エディターの現在の内容
  * @returns {string[]} - KaTeX エラーメッセージのリスト
@@ -27,12 +84,14 @@ export function renderPreview(text) {
     .replace(/\\end\{itemize\}/g,     '</ul>')
     .replace(/\\begin\{enumerate\}/g, '<ol>')
     .replace(/\\end\{enumerate\}/g,   '</ol>')
-    .replace(/\\item(?:\s*)/g,        '<li>')
-    .replace(/\\textbf\{([^}]+)\}/g,  '<strong>$1</strong>')
-    .replace(/\\textit\{([^}]+)\}/g,  '<em>$1</em>')
-    .replace(/\\section\*?\{([^}]+)\}/g,       '<h2>$1</h2>')
-    .replace(/\\subsection\*?\{([^}]+)\}/g,    '<h3>$1</h3>')
-    .replace(/\\subsubsection\*?\{([^}]+)\}/g, '<h4>$1</h4>');
+    .replace(/\\item(?:\s*)/g,        '<li>');
+
+  // 波括弧のネストを考慮したコマンド変換（\section{$a^{bc}$} などに対応）
+  html = replaceBracedCommand(html, 'section', 'h2');
+  html = replaceBracedCommand(html, 'subsection', 'h3');
+  html = replaceBracedCommand(html, 'subsubsection', 'h4');
+  html = replaceBracedCommand(html, 'textbf', 'strong');
+  html = replaceBracedCommand(html, 'textit', 'em');
 
   // ─── 数式環境の変換 ─────────────────────────────────────────
   html = html

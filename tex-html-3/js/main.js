@@ -217,35 +217,6 @@ function buildExtensions() {
     // ・| ハンドラーは closeBrackets のデフォルト対象外のため不要（削除済み）
     keymap.of([
       {
-        key: "$",
-        run(view) {
-          const { state } = view;
-          const sel = state.selection.main;
-          if (!sel.empty) return false;
-          const prevChar = state.doc.sliceString(Math.max(0, sel.from - 1), sel.from);
-          const nextChar = state.doc.sliceString(sel.from, sel.from + 1);
-
-          if (prevChar === '$' && nextChar === '$') {
-            const changes = state.changeByRange(range => ({
-              changes: { from: range.from - 1, to: range.from + 1, insert: "$$\n\n$$" },
-              range: EditorSelection.cursor(range.from + 2),
-            }));
-            view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
-            return true;
-          }
-          if (nextChar === '$') {
-            view.dispatch({ selection: { anchor: sel.from + 1 } });
-            return true;
-          }
-          const changes = state.changeByRange(range => ({
-            changes: { from: range.from, insert: "$$" },
-            range: EditorSelection.cursor(range.from + 1),
-          }));
-          view.dispatch(state.update(changes, { userEvent: "input.type", scrollIntoView: true }));
-          return true;
-        },
-      },
-      {
         key: "(",
         run(view) {
           const { state } = view;
