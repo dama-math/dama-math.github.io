@@ -32,7 +32,7 @@ import { stex }        from '@codemirror/legacy-modes/mode/stex';
 
 import { loadTabs }                                       from './storage.js';
 import { initTabs, addTab, syncCurrentContent,
-         getCurrentTab }                                  from './tabs.js';
+         getCurrentTab, restoreClosedTab }               from './tabs.js';
 import { renderPreview }                                  from './preview.js';
 import { atSnippetSource, wordSnippetSource }             from './snippets.js';
 import { initToolbar }                                    from './toolbar.js';
@@ -205,6 +205,23 @@ function buildExtensions() {
           } else {
             showToast('保存しました (Auto-save)');
           }
+          return true;
+        },
+        preventDefault: true,
+      },
+      {
+        // Ctrl+Shift+T / Mod-Shift-T: 閉じたタブを元に戻す
+        key: 'Mod-Shift-t',
+        run() {
+          handleRestoreTab();
+          return true;
+        },
+        preventDefault: true,
+      },
+      {
+        key: 'Mod-Shift-T',
+        run() {
+          handleRestoreTab();
           return true;
         },
         preventDefault: true,
@@ -413,11 +430,40 @@ function onTabSwitch(_index, content, tabId, prevTabId) {
 }
 
 /**
- * タブが削除されたときにキャッシュを整理する
+ * タブが削除されたときにキャッシュを整理し、トースト通知を表示する
  * @param {string} removedTabId
+ * @param {{ id: string, name: string, content: string }} [removedTab]
  */
-function onTabRemove(removedTabId) {
+function onTabRemove(removedTabId, removedTab) {
   tabStateCache.delete(removedTabId);
+  const name = removedTab?.name ?? 'タブ';
+  showToast(`「${name}」を閉じました (Ctrl+Shift+T で元に戻す)`);
+}
+
+/**
+ * 閉じたタブを元に戻す共通処理
+ */
+function handleRestoreTab() {
+  const restored = restoreClosedTab();
+  if (restored) {
+    showToast(`タブ「${restored.name}」を復元しました`);
+  } else {
+    showToast('元に戻せるタブはありません');
+  }
+}
+
+/**
+ * 閉じたタブ履歴件数に応じて「元に戻す」ボタンの状態を更新する
+ * @param {number} count
+ */
+function updateUndoTabButton(count) {
+  const btn = document.getElementById('btn-undo-tab');
+  if (!btn) return;
+  const hasHistory = count > 0;
+  btn.disabled = !hasHistory;
+  btn.title = hasHistory
+    ? '閉じたタブを元に戻す (Ctrl+Shift+T)'
+    : '閉じたタブを元に戻す (履歴なし)';
 }
 
 // ─── UI ヘルパー ─────────────────────────────────────────────
@@ -518,9 +564,10 @@ async function init() {
   // タブシステム初期化
   initTabs({
     savedTabs,
-    onSwitch:   onTabSwitch,
-    getContent: () => editorView?.state.doc.toString() ?? '',
-    onRemove:   onTabRemove,
+    onSwitch:        onTabSwitch,
+    getContent:      () => editorView?.state.doc.toString() ?? '',
+    onRemove:        onTabRemove,
+    onHistoryChange: updateUndoTabButton,
   });
 
   // ツールバー初期化
@@ -529,6 +576,19 @@ async function init() {
   // タブ追加ボタン
   document.getElementById('btn-add-tab')
     .addEventListener('click', addTab);
+
+  // タブ復元ボタン
+  document.getElementById('btn-undo-tab')
+    ?.addEventListener('click', handleRestoreTab);
+
+  // エディター外フォーカス時の Ctrl+Shift+T / Cmd+Shift+T
+  window.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 't' || e.key === 'T')) {
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      handleRestoreTab();
+    }
+  });
 
   // エクスポートボタン
   document.getElementById('btn-export')

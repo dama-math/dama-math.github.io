@@ -5,20 +5,23 @@
  * ID はセッション間の一意識別子として使用する。
  */
 
-import { saveTabs, saveActiveTabId, loadActiveTabId } from './storage.js';
+import { saveTabs, saveActiveTabId, loadActiveTabId, saveClosedTabs, loadClosedTabs } from './storage.js';
 
 // ─── 定数 ────────────────────────────────────────────────────────
-const DEFAULT_COUNT  = 10;
-const DEFAULT_PREFIX = 'テキスト';
+const DEFAULT_COUNT   = 10;
+const DEFAULT_PREFIX  = 'テキスト';
+const MAX_CLOSED_TABS = 20;
 
 // ─── 内部状態 ────────────────────────────────────────────────────
 let _tabs       = [];   // { id, name, content }[]
 let _currentIdx = 0;
+let _closedTabs = [];   // { tab: { id, name, content }, index: number, closedAt: number }[]
 
 // コールバック
-let _onSwitch   = null; // (index, content, tabId, prevTabId) => void
-let _onRemove   = null; // (removedTabId) => void
-let _getContent = null; // () => string
+let _onSwitch        = null; // (index, content, tabId, prevTabId) => void
+let _onRemove        = null; // (removedTabId, removedTab) => void
+let _onHistoryChange = null; // (count) => void
+let _getContent      = null; // () => string
 
 // Fix #8: 自動保存のデバウンスタイマー
 let _saveTimer = null;
@@ -49,16 +52,21 @@ function _debouncedSave() {
 
 /**
  * タブシステムを初期化する
- * @param {object} opts
- * @param {Array|null} opts.savedTabs    保存済みタブデータ
- * @param {Function}   opts.onSwitch     切り替えコールバック (index, content, tabId, prevTabId) => void
- * @param {Function}   opts.getContent   現在のエディター内容を返す関数
- * @param {Function}   [opts.onRemove]   削除コールバック (removedTabId) => void
+ * @param {object}   opts
+ * @param {Array|null} opts.savedTabs       保存済みタブデータ
+ * @param {Function}   opts.onSwitch        切り替えコールバック (index, content, tabId, prevTabId) => void
+ * @param {Function}   opts.getContent      現在のエディター内容を返す関数
+ * @param {Function}   [opts.onRemove]      削除コールバック (removedTabId, removedTab) => void
+ * @param {Function}   [opts.onHistoryChange] 閉じたタブ履歴件数の変化通知コールバック (count) => void
  */
-export function initTabs({ savedTabs, onSwitch, getContent, onRemove }) {
-  _onSwitch   = onSwitch;
-  _getContent = getContent;
-  _onRemove   = onRemove ?? null;
+export function initTabs({ savedTabs, onSwitch, getContent, onRemove, onHistoryChange }) {
+  _onSwitch        = onSwitch;
+  _getContent      = getContent;
+  _onRemove        = onRemove ?? null;
+  _onHistoryChange = onHistoryChange ?? null;
+
+  _closedTabs = loadClosedTabs();
+  if (_onHistoryChange) _onHistoryChange(_closedTabs.length);
 
   if (savedTabs && savedTabs.length > 0) {
     // 後方互換性: id がないタブには付与する
@@ -98,6 +106,10 @@ export function getCurrentIndex() { return _currentIdx; }
 export function getCurrentTab()   { return _tabs[_currentIdx]; }
 /** 全タブデータ */
 export function getTabs()         { return _tabs; }
+/** 復元可能なタブがあるか判定 */
+export function canRestoreTab()   { return _closedTabs.length > 0; }
+/** 閉じたタブの履歴件数を取得 */
+export function getClosedTabsCount() { return _closedTabs.length; }
 
 /**
  * エディター内容の変更を現在のタブに同期する（自動保存用）
@@ -134,8 +146,27 @@ export function addTab() {
  */
 export function removeTab(index) {
   if (_tabs.length <= 1) return;
-  const removedId = _tabs[index].id;
-  const wasActive = (index === _currentIdx);
+
+  // アクティブタブを削除する場合は直前の最新内容を同期
+  if (index === _currentIdx && _getContent) {
+    _tabs[index].content = _getContent();
+  }
+
+  const removedTab = { ..._tabs[index] };
+  const removedId  = removedTab.id;
+  const wasActive  = (index === _currentIdx);
+
+  // 閉じたタブ履歴に追加（最大件数を維持）
+  _closedTabs.push({
+    tab:      removedTab,
+    index:    index,
+    closedAt: Date.now(),
+  });
+  if (_closedTabs.length > MAX_CLOSED_TABS) {
+    _closedTabs.shift();
+  }
+  saveClosedTabs(_closedTabs);
+  if (_onHistoryChange) _onHistoryChange(_closedTabs.length);
 
   // Fix #9: 対象要素のみ除去
   const removedEl = document.querySelector(`.tab-item[data-tab-id="${removedId}"]`);
@@ -151,7 +182,7 @@ export function removeTab(index) {
   }
 
   saveTabs(_tabs);
-  if (_onRemove) _onRemove(removedId);
+  if (_onRemove) _onRemove(removedId, removedTab);
 
   // 残存要素の active クラスを更新
   document.querySelectorAll('#tab-list .tab-item').forEach((el, i) => {
@@ -174,6 +205,50 @@ export function removeTab(index) {
     // prevTabId = null: 削除済みのため保存不要
     _onSwitch(_currentIdx, tab.content, tab.id, null);
   }
+}
+
+/**
+ * 閉じたタブを元に戻す（直前に閉じた順に復元）
+ * @returns {{ id: string, name: string, content: string } | null} 復元されたタブ（履歴なしなら null）
+ */
+export function restoreClosedTab() {
+  if (_closedTabs.length === 0) return null;
+
+  const record = _closedTabs.pop();
+  saveClosedTabs(_closedTabs);
+  if (_onHistoryChange) _onHistoryChange(_closedTabs.length);
+
+  // 挿入前に直前のアクティブタブの内容を同期し、ID を退避
+  const prevActiveId = _tabs[_currentIdx]?.id ?? null;
+  if (_getContent && _tabs[_currentIdx]) {
+    _tabs[_currentIdx].content = _getContent();
+    saveTabs(_tabs);
+  }
+
+  // 復元先のインデックス（現在のタブ数を超過していれば末尾）
+  const targetIdx = Math.max(0, Math.min(record.index, _tabs.length));
+  // 同一 ID が既に存在する場合は新規生成（通常は存在しない）
+  const id = _tabs.some(t => t.id === record.tab.id) ? _genId() : record.tab.id;
+  const restoredTab = _makeTab(record.tab.name, record.tab.content, id);
+
+  // 挿入によって直前のアクティブタブの位置がずれる場合はインデックスを補正
+  if (targetIdx <= _currentIdx) {
+    _currentIdx++;
+  }
+
+  _tabs.splice(targetIdx, 0, restoredTab);
+  saveTabs(_tabs);
+
+  // DOM 要素を挿入
+  const list = document.getElementById('tab-list');
+  const newEl = _createTabElement(restoredTab, false);
+  const referenceEl = list.children[targetIdx] || null;
+  list.insertBefore(newEl, referenceEl);
+
+  // 復元したタブへ切り替え（直前タブのテキストは既に保存済みのため saveFirst: false、prevActiveId を明示）
+  _doSwitch(targetIdx, false, prevActiveId);
+
+  return restoredTab;
 }
 
 /**
@@ -255,14 +330,17 @@ function _createTabElement(tab, isActive) {
  * Fix #12: 切り替え前のタブ ID (oldTabId) を _onSwitch の第4引数として渡す。
  *          これにより main.js が currentTabId を独自管理する必要がなくなる。
  *
- * @param {number}  index     切り替え先インデックス
- * @param {boolean} saveFirst 切り替え前に現在の内容を保存するか
+ * @param {number}  index             切り替え先インデックス
+ * @param {boolean} saveFirst         切り替え前に現在の内容を保存するか
+ * @param {string|null} [explicitOldTabId] 明示的に渡す直前タブ ID（saveFirst = false かつ直前タブをキャッシュしたい場合）
  */
-function _doSwitch(index, saveFirst = true) {
-  // saveFirst = false（初回）は oldTabId を null にして main.js の保存をスキップさせる
-  const oldTabId = saveFirst ? (_tabs[_currentIdx]?.id ?? null) : null;
+function _doSwitch(index, saveFirst = true, explicitOldTabId = undefined) {
+  // saveFirst = false（初回等）は oldTabId を null にして main.js の保存をスキップさせる（explicitOldTabId がある場合は優先）
+  const oldTabId = explicitOldTabId !== undefined
+    ? explicitOldTabId
+    : (saveFirst ? (_tabs[_currentIdx]?.id ?? null) : null);
 
-  if (saveFirst && _getContent) {
+  if (saveFirst && _getContent && _tabs[_currentIdx]) {
     _tabs[_currentIdx].content = _getContent();
     saveTabs(_tabs);
   }

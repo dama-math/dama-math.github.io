@@ -394,12 +394,13 @@ body {
   color: var(--error);
 }
 
-#btn-add-tab {
+#btn-add-tab,
+#btn-undo-tab {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   background: transparent;
   color: var(--text-3);
@@ -412,16 +413,31 @@ body {
   touch-action: manipulation;
 }
 
+#btn-undo-tab svg {
+  display: block;
+  transition: transform var(--t), color var(--t);
+}
+
 @media (pointer: fine) {
-  #btn-add-tab:hover {
+  #btn-add-tab:hover,
+  #btn-undo-tab:not(:disabled):hover {
     background: var(--bg-3);
     color: var(--accent);
   }
+  #btn-undo-tab:not(:disabled):hover svg {
+    transform: rotate(-15deg);
+  }
 }
 
-#btn-add-tab:active {
+#btn-add-tab:active,
+#btn-undo-tab:not(:disabled):active {
   background: var(--bg-4);
   color: var(--accent);
+}
+
+#btn-undo-tab:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
 }
 
 .tab-rename-input {
